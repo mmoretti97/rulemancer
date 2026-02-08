@@ -1,6 +1,7 @@
 (deftemplate game-config
   (slot game-name)
-  (slot description))
+  (slot description)
+  (slot num-players))
 
 (deftemplate assertable
   (slot name)

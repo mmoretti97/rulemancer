@@ -4,6 +4,8 @@ import (
 	"errors"
 	"log"
 	"os"
+	"strconv"
+	"sync"
 )
 
 type Game struct {
@@ -11,9 +13,12 @@ type Game struct {
 	description   string
 	id            string
 	rulesLocation string
+	numPlayers    int
 	assertable    map[string][]string
 	responses     map[string][]string
 	queryable     map[string][]string
+	runningRooms  map[string]*Room
+	roomsMutex    sync.RWMutex
 }
 
 func (g *Game) Info() map[string]any {
@@ -25,6 +30,7 @@ func (g *Game) Info() map[string]any {
 		"assertable":    g.assertable,
 		"responses":     g.responses,
 		"queryable":     g.queryable,
+		"runningRooms":  g.runningRooms,
 	}
 }
 
@@ -60,6 +66,7 @@ func (e *Engine) newGame(rulesLocation string) error {
 	// Retrieve game configuration facts
 	var name string
 	var description string
+	var numPlayers int
 
 	gc, err := cli.QueryFacts("game-config")
 	if err != nil {
@@ -83,6 +90,16 @@ func (e *Engine) newGame(rulesLocation string) error {
 			description = desc
 		} else {
 			return errors.New("game-config missing description slot")
+		}
+		if numPlayersStr, ok := gcMap[0]["num-players"]; ok {
+			numPlayersInt, err := strconv.Atoi(numPlayersStr)
+			if err != nil {
+				return errors.New("game-config num-players slot must be an integer")
+			}
+			// The numPlayers value is currently not used, but it can be stored in the Game struct for future use
+			numPlayers = numPlayersInt
+		} else {
+			return errors.New("game-config missing num-players slot")
 		}
 	default:
 		return errors.New("multiple game-config facts found in the rules location")
@@ -114,11 +131,15 @@ func (e *Engine) newGame(rulesLocation string) error {
 		name:          name,
 		description:   description,
 		rulesLocation: rulesLocation,
+		numPlayers:    numPlayers,
 		assertable:    assertableFacts,
 		responses:     results,
 		queryable:     queryableFacts,
 		id:            e.generateGameUniqueID(),
+		runningRooms:  make(map[string]*Room),
+		roomsMutex:    sync.RWMutex{},
 	}
+	e.numGames++
 	e.games[game.id] = game
 
 	if e.Debug {

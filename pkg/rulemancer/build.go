@@ -11,10 +11,15 @@ import (
 
 type ProtocolData struct {
 	*Engine
-	relations  []string
-	slots      map[string][]string
-	multislots map[string][]string
-	funcMap    template.FuncMap
+	CurrentAssert string
+	CurrentQuery  string
+	Assertables   map[string][]string
+	Responses     map[string][]string
+	Queryables    map[string][]string
+	Relations     []string
+	Slots         map[string][]string
+	Multislots    map[string][]string
+	funcMap       template.FuncMap
 }
 
 func (e *Engine) newProtocolData(withFuncMap bool) *ProtocolData {
@@ -41,7 +46,7 @@ func (e *Engine) newProtocolData(withFuncMap bool) *ProtocolData {
 		}
 	}
 	if !withFuncMap {
-		return &ProtocolData{Engine: e, slots: slots, multislots: multislots, funcMap: nil}
+		return &ProtocolData{Engine: e, Slots: slots, Multislots: multislots, funcMap: nil}
 	}
 
 	funcMap := template.FuncMap{
@@ -92,16 +97,16 @@ func (e *Engine) newProtocolData(withFuncMap bool) *ProtocolData {
 			return dict, nil
 		},
 	}
-	return &ProtocolData{Engine: e, slots: slots, multislots: multislots, funcMap: funcMap}
+	return &ProtocolData{Engine: e, Slots: slots, Multislots: multislots, funcMap: funcMap}
 }
 
 // Merge merges another ProtocolData into this one.
 func (pd *ProtocolData) Merge(other *ProtocolData) {
-	for rel, slots := range other.slots {
-		if _, exists := pd.slots[rel]; !exists {
-			pd.slots[rel] = slots
+	for rel, slots := range other.Slots {
+		if _, exists := pd.Slots[rel]; !exists {
+			pd.Slots[rel] = slots
 		} else {
-			existingSlots := pd.slots[rel]
+			existingSlots := pd.Slots[rel]
 			slotSet := make(map[string]struct{})
 			for _, slot := range existingSlots {
 				slotSet[slot] = struct{}{}
@@ -111,14 +116,14 @@ func (pd *ProtocolData) Merge(other *ProtocolData) {
 					existingSlots = append(existingSlots, slot)
 				}
 			}
-			pd.slots[rel] = existingSlots
+			pd.Slots[rel] = existingSlots
 		}
 	}
-	for rel, multislots := range other.multislots {
-		if _, exists := pd.multislots[rel]; !exists {
-			pd.multislots[rel] = multislots
+	for rel, multislots := range other.Multislots {
+		if _, exists := pd.Multislots[rel]; !exists {
+			pd.Multislots[rel] = multislots
 		} else {
-			existingMultislots := pd.multislots[rel]
+			existingMultislots := pd.Multislots[rel]
 			multislotSet := make(map[string]struct{})
 			for _, multislot := range existingMultislots {
 				multislotSet[multislot] = struct{}{}
@@ -128,7 +133,7 @@ func (pd *ProtocolData) Merge(other *ProtocolData) {
 					existingMultislots = append(existingMultislots, multislot)
 				}
 			}
-			pd.multislots[rel] = existingMultislots
+			pd.Multislots[rel] = existingMultislots
 		}
 	}
 }
@@ -256,6 +261,11 @@ func (e *Engine) BuildEngineExtras(shellOutdir string) error {
 				}
 			}
 		}
+
+		rf.Assertables = game.assertable
+		rf.Responses = game.responses
+		rf.Queryables = game.queryable
+
 		gamesInterfaces[gameName] = rf
 	}
 
@@ -294,29 +304,60 @@ func (e *Engine) BuildEngineExtras(shellOutdir string) error {
 				}
 				return fmt.Errorf("failed to parse template %s for game %s: %w", templateName, gameName, err)
 			}
-			outputFilePath := fmt.Sprintf("%s/%s/%s", shellOutdir, gameName, templateName)
-			outputFile, err := os.Create(outputFilePath)
-			if err != nil {
-				if e.Debug {
-					l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/BuildEngineExtras]")+" ", 0)
-					l.Printf("Error creating output file %s: %v", outputFilePath, err)
+
+			// Process the template name to determine the type of file to generate.
+			// For example, if the template name is "assert.sh", we might want to generate an assert shell script for every
+			// assertable relation in the game. Same for "query.sh" and queryable relations. For other templates,
+			// we might want to generate a single file with the template executed with the whole ProtocolData.
+			switch templateName {
+			case "assert.sh":
+				for ass := range pd.Assertables {
+					pd.CurrentAssert = ass
+					outputFilePath := fmt.Sprintf("%s/%s/assert_%s.sh", shellOutdir, gameName, ass)
+					if err := e.commitTemplate(tmpl, templateContent, outputFilePath, pd, gameName, templateName); err != nil {
+						return err
+					}
 				}
-				return fmt.Errorf("failed to create output file %s: %w", outputFilePath, err)
-			}
-			defer outputFile.Close()
-			if err := tmpl.Execute(outputFile, pd); err != nil {
-				if e.Debug {
-					l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/BuildEngineExtras]")+" ", 0)
-					l.Printf("Error executing template %s for game %s: %v", templateName, gameName, err)
+			case "query.sh":
+				for query := range pd.Queryables {
+					pd.CurrentQuery = query
+					outputFilePath := fmt.Sprintf("%s/%s/query_%s.sh", shellOutdir, gameName, query)
+					if err := e.commitTemplate(tmpl, templateContent, outputFilePath, pd, gameName, templateName); err != nil {
+						return err
+					}
 				}
-				return fmt.Errorf("failed to execute template %s for game %s: %w", templateName, gameName, err)
-			}
-			if e.Debug {
-				l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, yellow("[rulemancer/BuildEngineExtras]")+" ", 0)
-				l.Printf("Generated shell file: %s", outputFilePath)
+			default:
+				outputFilePath := fmt.Sprintf("%s/%s/%s", shellOutdir, gameName, templateName)
+				if err := e.commitTemplate(tmpl, templateContent, outputFilePath, pd, gameName, templateName); err != nil {
+					return err
+				}
 			}
 		}
 	}
 
+	return nil
+}
+
+func (e *Engine) commitTemplate(tmpl *template.Template, templateContent string, outputFilePath string, pd *ProtocolData, gameName string, templateName string) error {
+	outputFile, err := os.OpenFile(outputFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0700)
+	if err != nil {
+		if e.Debug {
+			l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/BuildEngineExtras]")+" ", 0)
+			l.Printf("Error creating output file %s: %v", outputFilePath, err)
+		}
+		return fmt.Errorf("failed to create output file %s: %w", outputFilePath, err)
+	}
+	defer outputFile.Close()
+	if err := tmpl.Execute(outputFile, pd); err != nil {
+		if e.Debug {
+			l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/BuildEngineExtras]")+" ", 0)
+			l.Printf("Error executing template %s for game %s: %v", templateName, gameName, err)
+		}
+		return fmt.Errorf("failed to execute template %s for game %s: %w", templateName, gameName, err)
+	}
+	if e.Debug {
+		l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, yellow("[rulemancer/BuildEngineExtras]")+" ", 0)
+		l.Printf("Generated shell file: %s", outputFilePath)
+	}
 	return nil
 }

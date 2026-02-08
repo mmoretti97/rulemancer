@@ -34,7 +34,7 @@ func (e *Engine) apiCreateRoom(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if room, err := e.newRoom(req.Name, req.Description, req.GameRef); err != nil {
-		Error(w, http.StatusInternalServerError, "failed to create room")
+		Error(w, http.StatusInternalServerError, "failed to create room: "+err.Error())
 		return
 	} else {
 		JSON(w, http.StatusCreated, map[string]string{
@@ -56,6 +56,7 @@ func (e *Engine) apiGetRoom(w http.ResponseWriter, r *http.Request) {
 			"description":    room.description,
 			"clips_instance": room.clipsInstance.Info(),
 			"running_game":   room.game.Info(),
+			"num_clients":    room.numClients,
 		})
 	}
 }

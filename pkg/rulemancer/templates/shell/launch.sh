@@ -4,9 +4,9 @@
 # The admin token is written in stdout as: admin jwt: TOKEN
 # The token is stored in API_TOKEN
 
-# Check if the env RULEMANCE_JWT_SECRET exists
-if [ -z "$RULEMANCE_JWT_SECRET" ]; then
-    echo "Error: RULEMANCE_JWT_SECRET environment variable not set"
+# Check if the env RULEMANCER_JWT_SECRET exists
+if [ -z "$RULEMANCER_JWT_SECRET" ]; then
+    echo "Error: RULEMANCER_JWT_SECRET environment variable not set"
     return 1 2>/dev/null || exit 1
 fi
 

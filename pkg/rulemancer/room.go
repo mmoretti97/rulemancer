@@ -5,6 +5,8 @@ package rulemancer
 
 import (
 	"errors"
+	"sync"
+	"time"
 )
 
 type Room struct {
@@ -12,8 +14,13 @@ type Room struct {
 	description   string
 	id            string
 	game          *Game
-	clients       []*Client
+	clients       map[string]*Client
+	numClients    int
+	clientsMutex  sync.RWMutex
+	watchers      map[string]*Client
+	watchersMutex sync.RWMutex
 	clipsInstance *ClipsInstance
+	lastActive    int64
 }
 
 func (e *Engine) newRoom(name, description, gameRef string) (*Room, error) {
@@ -45,7 +52,14 @@ func (e *Engine) newRoom(name, description, gameRef string) (*Room, error) {
 		id:            e.generateRoomUniqueID(),
 		game:          game,
 		clipsInstance: cli,
+		numClients:    game.numPlayers,
+		clients:       make(map[string]*Client),
+		clientsMutex:  sync.RWMutex{},
+		watchers:      make(map[string]*Client),
+		watchersMutex: sync.RWMutex{},
+		lastActive:    time.Now().Unix(),
 	}
+	e.numRooms++
 	e.rooms[room.id] = room
 	return room, nil
 }
@@ -76,6 +90,7 @@ func (e *Engine) removeRoom(id string) (*Room, error) {
 			room.clipsInstance.Dispose()
 		}
 		delete(e.rooms, id)
+		e.numRooms--
 		return room, nil
 	}
 	return nil, errors.New("room not found")
