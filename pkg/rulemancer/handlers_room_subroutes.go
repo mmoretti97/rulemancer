@@ -39,7 +39,42 @@ func (e *Engine) apiAssert(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 
-		// ci := room.clipsInstance
+		requester := ""
+		_, claims, err := jwtauth.FromContext(r.Context())
+		if err != nil {
+			if e.Debug {
+				l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/apiAssert]")+" ", 0)
+				l.Printf("Unauthorized assert attempt: %v", err)
+			}
+			Error(w, http.StatusUnauthorized, "unauthorized")
+			return
+		} else if clientID, ok := claims["id"].(string); !ok {
+			if e.Debug {
+				l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/apiAssert]")+" ", 0)
+				l.Printf("Unauthorized assert attempt with invalid token: %v", claims)
+			}
+			Error(w, http.StatusUnauthorized, "unauthorized")
+			return
+		} else {
+			requester = clientID
+		}
+
+		canQuery := false
+		room.clientsMutex.RLock()
+		if _, ok := room.clients[requester]; ok {
+			canQuery = true
+		}
+		room.clientsMutex.RUnlock()
+
+		if !canQuery {
+			if e.Debug {
+				l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/apiAssert]")+" ", 0)
+				l.Printf("Forbidden assert attempt in room %s by %s", id, requester)
+			}
+			Error(w, http.StatusForbidden, "forbidden")
+			return
+		}
+
 		if relList, ok := room.game.assertable[assertion]; !ok {
 			if e.Debug {
 				l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/apiAssert]")+" ", 0)
