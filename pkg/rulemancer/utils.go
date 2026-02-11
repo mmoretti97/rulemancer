@@ -21,7 +21,7 @@ func (w writer) Write(b []byte) (n int, err error) {
 	return w.Writer.Write(append([]byte(time.Now().Format(w.timeFormat)), b...))
 }
 
-func RandStringBytes(n int) string {
+func randStringBytes(n int) string {
 	b := make([]byte, n)
 	for i := range b {
 		b[i] = letterBytes[rand.Intn(len(letterBytes))]
@@ -51,9 +51,13 @@ func cyan(s string) string {
 	return "\033[36m" + s + "\033[0m"
 }
 
-func elementsInSlice(slice []string, element string) bool {
-	for _, v := range slice {
-		if v == element {
+func green(s string) string {
+	return "\033[32m" + s + "\033[0m"
+}
+
+func isInSlice(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
 			return true
 		}
 	}

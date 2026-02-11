@@ -7,7 +7,7 @@ payload=$(cat <<EOF
 {
   "name": "example-room",
   "description": "This is an example room",
-  "game_ref": "TicTacToe"
+  "game_ref": "{{ .GameName }}"
 }
 EOF
 )

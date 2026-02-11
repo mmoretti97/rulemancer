@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/go-chi/chi/v5"
+	jwtauth "github.com/go-chi/jwtauth/v5"
 )
 
 func (e *Engine) querySubRoutes(r chi.Router) {
@@ -25,6 +26,47 @@ func (e *Engine) apiQuery(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "room not found")
 		return
 	} else {
+
+		requester := ""
+		_, claims, err := jwtauth.FromContext(r.Context())
+		if err != nil {
+			if e.Debug {
+				l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/apiQuery]")+" ", 0)
+				l.Printf("Unauthorized query attempt: %v", err)
+			}
+			Error(w, http.StatusUnauthorized, "unauthorized")
+			return
+		} else if clientID, ok := claims["id"].(string); !ok {
+			if e.Debug {
+				l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/apiQuery]")+" ", 0)
+				l.Printf("Unauthorized query attempt with invalid token: %v", claims)
+			}
+			Error(w, http.StatusUnauthorized, "unauthorized")
+			return
+		} else {
+			requester = clientID
+		}
+
+		canQuery := false
+		room.clientsMutex.RLock()
+		room.watchersMutex.RLock()
+		if _, ok := room.clients[requester]; ok {
+			canQuery = true
+		}
+		if _, ok := room.watchers[requester]; ok {
+			canQuery = true
+		}
+		room.watchersMutex.RUnlock()
+		room.clientsMutex.RUnlock()
+
+		if !canQuery {
+			if e.Debug {
+				l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/apiQuery]")+" ", 0)
+				l.Printf("Forbidden query attempt in room %s by %s", id, requester)
+			}
+			Error(w, http.StatusForbidden, "forbidden")
+			return
+		}
 
 		ci := room.clipsInstance
 		if relList, ok := room.game.queryable[query]; !ok {

@@ -1,7 +1,8 @@
 (deffacts tictactoe-config
   (game-config
     (game-name tictactoe)
-    (description "A simple Tic Tac Toe game between two players.")))
+    (description "A simple Tic Tac Toe game between two players.")
+    (num-players 2)))
 
 (deffacts tictactoe-interface
   (assertable

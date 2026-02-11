@@ -24,6 +24,7 @@ A Go application that embeds the CLIPS expert system engine to power rules-based
 - Go 1.25+
 - C compiler (for CLIPS 6.4 compilation)
 - re2c with go-bindings (for the build subcommand)
+- JWT secret (set via `RULEMANCER_JWT_SECRET` environment variable or `--secret` flag)
 
 ### Clone the Repository
 
@@ -58,15 +59,29 @@ The above commands will compile CLIPS and build the Rulemancer binary placed in 
 
 ### Basic Usage
 
+Before starting the server, set the JWT secret as an environment variable:
+
+```bash
+export RULEMANCER_JWT_SECRET="your-secret-key-here"
+```
+
+Then use the following commands:
+
 - `./rulemancer test` - Run test suite
-- `./rulemancer build` - Build the extra tools (generates client shell scripts)
+- `./rulemancer build` - Build the extra tools (generates client shell scripts from templates)
 - `./rulemancer serve` - Start HTTPS server (listens on :3000 with TLS)
 
 Once the server is running, it will print an admin JWT token to stdout. The API can be accessed at `https://localhost:3000/api/v1/`
 
-To ease the interaction, the `rulemancer build` command generates shell client interfaces in the `interface/` folder for all available games.
+#### Shell Script Templates
 
-The [Rooms and Games](README-ROOMS-AND-GAMES.md) document provides detailed information on how to create and manage game rooms and interact with games via the API. The API endpoints are documented in the [API Endpoints](README-API.md) document.
+The `rulemancer build` command generates shell client interfaces from templates located in `pkg/rulemancer/templates/shell/`. These scripts are created in the `interface/` folder for each available game, providing convenient command-line access to the API.
+
+#### Documentation
+
+- [API Endpoints](README-API.md) - Complete API reference for all endpoints
+- [Rooms and Games](README-ROOMS-AND-GAMES.md) - Guide for creating and managing game rooms
+- [Game Definition](README-GAME-DEFINITION.md) - How to define new games using CLIPS
 
 The `rulemancer.json` configuration file can be edited to customize server settings.
 
@@ -74,10 +89,17 @@ The `rulemancer.json` configuration file can be edited to customize server setti
 
 Rulemancer uses JWT-based authentication for API access:
 
-- **Admin Token**: Printed to stdout at server startup, required for system operations (health checks, shutdown)
-- **Client Tokens**: Create clients via the API to get individual JWT tokens for room operations
+- **Admin Token**: Automatically generated and printed to stdout at server startup. Required for system operations (health checks, shutdown). Has the ID `"admin"` in its JWT payload.
+- **Client Tokens**: Create clients via the `/api/v1/new/client` endpoint to get individual JWT tokens. Each client receives a unique token for authenticated API access.
 
-Clients can be created, listed, and deleted through the `/api/v1/client` endpoints. Each client receives a unique JWT token for authenticated API access.
+### Client Workflow
+
+1. **Create a Client**: POST to `/api/v1/new/client` with name and description - no authentication required for creation
+2. **Receive Token**: The response includes a unique JWT token (`api_token`) for that client
+3. **Use Token**: Include the token in the `Authorization: Bearer <token>` header for all subsequent API calls
+4. **Manage Clients**: Admin can list, view, and delete clients through `/api/v1/client` endpoints
+
+Clients can join game rooms, watch games as spectators, and interact with game logic through the API. See the [Rooms and Games](README-ROOMS-AND-GAMES.md) guide for more details.
 
 ## Configuration
 
@@ -112,7 +134,8 @@ Each game directory should contain CLIPS files with:
   ```clips
   (game-config 
     (game-name "TicTacToe")
-    (description "Classic 3x3 grid game"))
+    (description "Classic 3x3 grid game")
+    (num-players 2))
   ```
 
 - **Assertable facts**: Facts that can be asserted by clients

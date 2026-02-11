@@ -280,7 +280,7 @@ func (e *ProtocolData) Compile(yyinput string) error {
 			varname {
 					//fmt.Println("deftemplate varname:", yyinput[prev:yycursor])
 					relation:= yyinput[prev:yycursor]
-					if _, exists := sS.slots[relation]; exists {
+					if _, exists := sS.Slots[relation]; exists {
 						sS.name = relation
 					}
 					prev = yycursor
@@ -349,8 +349,8 @@ func (e *ProtocolData) Compile(yyinput string) error {
 					slotName := yyinput[prev:yycursor]
 					deftempl:= sS.isInsideScope(ScopeDefTemplate)
 					if deftempl != nil && deftempl.name != "" {
-						if slotList, exists := sS.slots[deftempl.name]; exists {
-							sS.slots[deftempl.name] = append(slotList, slotName)
+						if slotList, exists := sS.Slots[deftempl.name]; exists {
+							sS.Slots[deftempl.name] = append(slotList, slotName)
 						}
 					}
 					prev = yycursor

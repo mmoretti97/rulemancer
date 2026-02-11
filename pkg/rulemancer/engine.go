@@ -24,10 +24,13 @@ type Engine struct {
 	*jwtauth.JWTAuth
 	games        map[string]*Game
 	gamesMutex   sync.RWMutex
+	numGames     int
 	rooms        map[string]*Room
 	roomsMutex   sync.RWMutex
+	numRooms     int
 	clients      map[string]*Client
 	clientsMutex sync.RWMutex
+	numClients   int
 	router       chi.Router
 	stopChan     chan os.Signal
 }
@@ -38,10 +41,13 @@ func NewEngine(secret string) *Engine {
 		JWTAuth:      jwtauth.New("HS256", []byte(secret), nil),
 		games:        make(map[string]*Game),
 		gamesMutex:   sync.RWMutex{},
+		numGames:     0,
 		rooms:        make(map[string]*Room),
 		roomsMutex:   sync.RWMutex{},
+		numRooms:     0,
 		clients:      make(map[string]*Client),
 		clientsMutex: sync.RWMutex{},
+		numClients:   0,
 		router:       chi.NewRouter(),
 		stopChan:     make(chan os.Signal, 1),
 	}
@@ -71,6 +77,9 @@ func (e *Engine) SpawnEngine() error {
 		r.Route("/room", e.roomRoutes)
 		r.Route("/client", e.clientRoutes)
 		r.Route("/game", e.gameRoutes)
+		r.Route("/join", e.joinRoutes)
+		r.Route("/watch", e.watchRoutes)
+		r.Route("/new", e.newRoutes)
 	})
 
 	srv := &http.Server{

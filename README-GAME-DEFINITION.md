@@ -21,7 +21,8 @@ Provides basic metadata about your game. In particular, it includes the game's n
 ```clips
 (deftemplate game-config
   (slot game-name)
-  (slot description))
+  (slot description)
+  (slot num-players))
 ```
 
 ### 2. `assertable`
@@ -71,13 +72,15 @@ Use `deffacts` to declare your game configuration:
 (deffacts yourgame-config
   (game-config
     (game-name YourGame)
-    (description "A description of your game and its rules.")))
+    (description "A description of your game and its rules.")
+    (num-players 2))
 ```
 
 **Fields:**
 
 - `game-name`: Identifier for your game (no spaces, use lowercase)
 - `description`: Human-readable description of the game
+- `num-players`: The number of players required to play the game
 
 ### Step 3: Define Game Interface
 
@@ -177,7 +180,8 @@ Here's the complete metadata file for Tic-Tac-Toe (`rulepool/tictactoemeta.clp`)
 (deffacts tictactoe-config
   (game-config
     (game-name tictactoe)
-    (description "A simple Tic Tac Toe game between two players.")))
+    (description "A simple Tic Tac Toe game between two players.")
+    (num-players 2))
 
 (deffacts tictactoe-interface
   (assertable

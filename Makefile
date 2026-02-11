@@ -5,6 +5,7 @@ all: rulemancer
 rulemancer:
 	@make -C pkg --no-print-directory all
 	@go build
+	@./rulemancer build
 
 .PHONY: clean
 clean:
