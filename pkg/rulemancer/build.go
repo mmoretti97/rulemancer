@@ -11,16 +11,17 @@ import (
 
 type ProtocolData struct {
 	*Engine
-	GameName      string
-	CurrentAssert string
-	CurrentQuery  string
-	Assertables   map[string][]string
-	Responses     map[string][]string
-	Queryables    map[string][]string
-	Relations     []string
-	Slots         map[string][]string
-	Multislots    map[string][]string
-	funcMap       template.FuncMap
+	GameName            string              // Name of the game
+	CurrentAssert       string              // The name of the current assert (used in assertions)
+	CurrentAssertParams []string            // The union of the sets of assertions parameters (used in assertions)
+	CurrentQuery        string              // The name of the current query (used in queries)
+	Assertables         map[string][]string // Assertable of the game
+	Responses           map[string][]string // Responses of the game
+	Queryables          map[string][]string // Queryable of the game
+	Relations           []string            // Relations of the game
+	Slots               map[string][]string // Slots of the game
+	Multislots          map[string][]string // Multislots of the game
+	funcMap             template.FuncMap
 }
 
 func (e *Engine) newProtocolData(withFuncMap bool) *ProtocolData {
@@ -315,6 +316,25 @@ func (e *Engine) BuildEngineExtras(shellOutdir string) error {
 			case "assert.sh":
 				for ass := range pd.Assertables {
 					pd.CurrentAssert = ass
+					pd.CurrentAssertParams = make([]string, 0)
+					for _, rel := range pd.Assertables[ass] {
+						if _, ok := pd.Slots[rel]; ok {
+							for _, slot := range pd.Slots[rel] {
+								if !isInSlice(pd.CurrentAssertParams, slot) {
+									pd.CurrentAssertParams = append(pd.CurrentAssertParams, slot)
+								}
+							}
+						}
+					}
+					for _, rel := range pd.Assertables[ass] {
+						if _, ok := pd.Multislots[rel]; ok {
+							for _, multislot := range pd.Multislots[rel] {
+								if !isInSlice(pd.CurrentAssertParams, multislot) {
+									pd.CurrentAssertParams = append(pd.CurrentAssertParams, multislot)
+								}
+							}
+						}
+					}
 					outputFilePath := fmt.Sprintf("%s/%s/assert-%s.sh", shellOutdir, gameName, ass)
 					if err := e.commitTemplate(tmpl, templateContent, outputFilePath, pd, gameName, templateName); err != nil {
 						return err
