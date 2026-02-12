@@ -122,6 +122,8 @@ Assertables define **inputs** to your game - actions or information that can be 
 
 This means external systems can assert facts like `(move ...)` into CLIPS.
 
+**Real-Time Notifications:** When facts are asserted via the API, all clients connected to the room's WebSocket (`/api/v1/room/{id}/ws`) receive real-time notifications with the asserted fact. This enables live game updates and spectator views.
+
 #### Results
 
 Results define **outputs** from your game logic - facts that should be returned after processing:
@@ -252,6 +254,11 @@ Looking at the `move` template, external systems can assert facts like:
    - Test that assertables work by asserting facts and checking the results
    - Test that queryables return expected game state
    - Verify results are properly generated
+
+5. **Real-Time Features**:
+   - Design your assertables with real-time notifications in mind
+   - Clients can subscribe to room WebSockets to receive live updates
+   - Consider how spectators will experience the game through WebSocket broadcasts
 
 ## Additional Resources
 

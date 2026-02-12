@@ -12,6 +12,7 @@ A Go application that embeds the CLIPS expert system engine to power rules-based
 - **Multi-Game Support**: Host multiple game types simultaneously with dynamic game loading
 - **Room-Based Multiplayer**: Create isolated game rooms for concurrent sessions
 - **HTTP API**: Comprehensive REST endpoints for system, game, and room management with TLS support
+- **Real-Time WebSocket Support**: Subscribe to room events and receive live notifications when actions occur
 - **Flexible Configuration**: JSON-based configuration with support for multiple game definitions
 - **CLI Tools**: Commands for testing, building, and serving games
 - **Client Management**: Track and manage connected clients per room
@@ -100,6 +101,15 @@ Rulemancer uses JWT-based authentication for API access:
 4. **Manage Clients**: Admin can list, view, and delete clients through `/api/v1/client` endpoints
 
 Clients can join game rooms, watch games as spectators, and interact with game logic through the API. See the [Rooms and Games](README-ROOMS-AND-GAMES.md) guide for more details.
+
+## Real-Time WebSocket Notifications
+
+Rulemancer supports real-time WebSocket connections for monitoring room activities:
+
+- **System Monitor**: Admin-only WebSocket at `/api/v1/system/ws` for system-wide monitoring
+- **Room Monitor**: Room-specific WebSocket at `/api/v1/room/{id}/ws` for real-time game updates
+
+Clients connected to a room's WebSocket receive instant notifications when facts are asserted (e.g., when players make moves). This enables real-time game interfaces and live spectator views. See the [Rooms and Games](README-ROOMS-AND-GAMES.md) guide for WebSocket usage examples.
 
 ## Configuration
 

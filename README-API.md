@@ -30,6 +30,10 @@ Requires admin authentication:
 - `POST /api/v1/system/quit` - Gracefully shutdown the server
   - **Request Body**: `{"graceful": true}`
   - **Response**: `{"status": "shutting down"}`
+- `WS /api/v1/system/ws` - WebSocket connection for system-wide monitoring (admin only)
+  - **Protocol**: WebSocket (wss://)
+  - **Authentication**: JWT token required via Authorization header during handshake
+  - **Purpose**: Real-time system monitoring and notifications
 
 ## Client Routes
 
@@ -67,10 +71,17 @@ Requires admin authentication:
 - `POST /api/v1/room/{id}/assert/{assertion}` - Assert facts to a room
   - **Request Body**: JSON object with relation names as keys and arrays of fact objects as values
   - **Response**: `{"response": {...}}` - Returns the result facts as defined in the game's response configuration
+  - **Side Effect**: Broadcasts notification to all WebSocket connections on the room
 - `POST /api/v1/room/{id}/query/{query}` - Query facts from a room
   - **Response**: `{"response": {...}}` - Returns the queried facts
 - `GET /api/v1/room/{id}/facts` - Get all facts from a room (debug mode only)
   - **Response**: `{"facts": [...]}`
+- `WS /api/v1/room/{id}/ws` - WebSocket connection for real-time room updates
+  - **Protocol**: WebSocket (wss://)
+  - **Authentication**: JWT token required via Authorization header during handshake
+  - **Access**: Available to room clients (players) and watchers (spectators)
+  - **Notifications**: Receives messages when facts are asserted in the room
+  - **Message Format**: Text messages like `"asserted (move x 1 y 1 player x)"`
 
 ## Join Routes
 

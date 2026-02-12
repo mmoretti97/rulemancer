@@ -22,11 +22,13 @@ Games are defined using CLIPS files and loaded at server startup. Each game spec
 - **Queryables**: Facts that clients can query (e.g., game state, winner)
 
 List available games:
+
 ```bash
 GET /api/v1/game/list
 ```
 
 Get game details:
+
 ```bash
 GET /api/v1/game/{game_id}
 ```
@@ -64,6 +66,7 @@ curl -k -X POST https://localhost:3000/api/v1/new/client \
 ```
 
 Response:
+
 ```json
 {
   "id": "client-123abc",
@@ -72,6 +75,7 @@ Response:
 ```
 
 **Important**: Save the `api_token` for all subsequent requests:
+
 ```bash
 export API_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
@@ -108,6 +112,7 @@ curl -k -X POST https://localhost:3000/api/v1/join/room/{room_id} \
 ```
 
 All join endpoints return:
+
 ```json
 {
   "room_id": "room-456def",
@@ -156,6 +161,7 @@ curl -k -X POST https://localhost:3000/api/v1/room/{room_id}/query/cell \
 ```
 
 Response:
+
 ```json
 {
   "response": {
@@ -169,6 +175,7 @@ Response:
 ```
 
 Query for winner:
+
 ```bash
 curl -k -X POST https://localhost:3000/api/v1/room/{room_id}/query/winner \
   -H "Authorization: Bearer $API_TOKEN"
@@ -193,13 +200,31 @@ curl -k -X POST https://localhost:3000/api/v1/watch/stop/{room_id} \
 ```
 
 Watchers can:
+
 - Query room state
 - View all game facts
+- Connect to the room's WebSocket for real-time updates
 
 Watchers cannot:
+
 - Assert facts
 - Make moves
 - Affect game state
+
+## Real-Time WebSocket Notifications
+
+Rulemancer supports WebSocket connections for real-time monitoring of room activities. This enables live game updates, spectator views, and interactive UI development.
+
+### Room WebSocket Endpoint
+
+```
+wss://localhost:3000/api/v1/room/{room_id}/ws
+```
+
+**Authentication**: JWT token must be provided in the Authorization header during the WebSocket handshake.
+
+**Access Control**: Only clients who have joined the room (as players) or are watching the room (as spectators) can connect to the room's WebSocket.
+**Notifications**: Whenever a fact is asserted in the room (e.g., a player makes a move), all connected WebSocket clients receive a notification with the asserted fact. This allows for real-time updates in game interfaces and live spectator views.
 
 ## Room Management
 
@@ -351,24 +376,29 @@ This endpoint is only available when the server is running with `"debug": true` 
 ## Troubleshooting
 
 ### "Room not found"
+
 - The room may have been deleted
 - Verify the room_id is correct
 - List all rooms to see available options
 
 ### "Unauthorized"
+
 - Check that your JWT token is valid
 - Ensure the token is included in the Authorization header
 - Verify the token hasn't expired
 
 ### "Assertion not found"
+
 - The assertion name doesn't match the game's assertables
 - Check the game details to see valid assertion names
 
 ### "Query not found"
+
 - The query name doesn't match the game's queryables
 - Check the game details to see valid query names
 
 ### "Invalid JSON body"
+
 - Verify JSON syntax is correct
 - Ensure relation names match the game's expected structure
 - Check that all required fields are provided
