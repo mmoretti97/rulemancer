@@ -177,6 +177,33 @@
 				color: var(--danger);
 			}
 
+			.badge {
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				padding: 4px 10px;
+				border-radius: 999px;
+				background: var(--primary-weak);
+				color: var(--primary);
+				font-size: 12px;
+				font-weight: 600;
+			}
+
+			.badge.ok {
+				background: #e7f8f4;
+				color: #067d68;
+			}
+
+			.badge.warn {
+				background: #fff5e6;
+				color: #f59e0b;
+			}
+
+			.badge.danger {
+				background: #feeceb;
+				color: var(--danger);
+			}
+
 			@media (max-width: 980px) {
 				.grid-two {
 					grid-template-columns: 1fr;
@@ -195,6 +222,10 @@
 				<p>Run assertions and queries for this game in a selected room.</p>
 			</div>
 			<div class="toolbar">
+				<span id="ws-status" class="badge warn">Room WS disconnected</span>
+				<button id="create-client" class="secondary" type="button">New Client</button>
+				<button id="join-room" class="secondary" type="button">Join Room</button>
+				<button id="create-room" class="secondary" type="button">New Room</button>
 				<input id="room-id" type="text" placeholder="Room ID" />
 				<input id="jwt" type="text" placeholder="Client JWT" />
 				<button id="save-jwt" class="secondary" type="button">Save JWT</button>
@@ -271,12 +302,212 @@
 				const roomIdInput = document.getElementById('room-id');
 				const jwtInput = document.getElementById('jwt');
 				const saveJwtButton = document.getElementById('save-jwt');
+				const wsStatus = document.getElementById('ws-status');
+				const createClientButton = document.getElementById('create-client');			const joinRoomButton = document.getElementById('join-room');				const createRoomButton = document.getElementById('create-room');
 
 				const JWT_STORAGE_KEY = 'rulemancer-client-jwt';
+				const ROOM_ID_STORAGE_KEY = 'rulemancer-room-id';
+
+				let roomSocket = null;
+
 				jwtInput.value = localStorage.getItem(JWT_STORAGE_KEY) || '';
+				roomIdInput.value = localStorage.getItem(ROOM_ID_STORAGE_KEY) || '';
 
 				saveJwtButton.addEventListener('click', function () {
-					localStorage.setItem(JWT_STORAGE_KEY, jwtInput.value.trim());
+					const jwt = jwtInput.value.trim();
+					const roomId = roomIdInput.value.trim();
+					localStorage.setItem(JWT_STORAGE_KEY, jwt);
+					localStorage.setItem(ROOM_ID_STORAGE_KEY, roomId);
+					connectRoomSocket();
+				});
+
+				function setWsStatus(text, variant) {
+					wsStatus.textContent = text;
+					wsStatus.classList.remove('ok', 'warn', 'danger');
+					if (variant) {
+						wsStatus.classList.add(variant);
+					}
+				}
+
+				function syncJwtCookie(jwt) {
+					if (!jwt) {
+						document.cookie = 'jwt=; Path=/; Max-Age=0; SameSite=Strict';
+						return;
+					}
+					const secureFlag = location.protocol === 'https:' ? '; Secure' : '';
+					document.cookie = 'jwt=' + encodeURIComponent(jwt) + '; Path=/; SameSite=Strict' + secureFlag;
+				}
+
+				function connectRoomSocket() {
+					const jwt = jwtInput.value.trim();
+					const roomId = roomIdInput.value.trim();
+
+					if (roomSocket) {
+						roomSocket.close();
+						roomSocket = null;
+					}
+
+					if (!roomId || !jwt) {
+						syncJwtCookie('');
+						setWsStatus('Room WS disconnected', 'warn');
+						return;
+					}
+
+					syncJwtCookie(jwt);
+
+					const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+					const wsUrl = protocol + '://' + location.host + '/api/v1/room/' + encodeURIComponent(roomId) + '/ws';
+					roomSocket = new WebSocket(wsUrl);
+					setWsStatus('Room WS connecting...', 'warn');
+
+					roomSocket.addEventListener('open', function () {
+						setWsStatus('Room WS connected', 'ok');
+					});
+
+					roomSocket.addEventListener('message', function (event) {
+						const message = String(event.data || '').trim();
+						console.log('Room message:', message);
+					});
+
+					roomSocket.addEventListener('close', function () {
+						setWsStatus('Room WS disconnected', 'danger');
+					});
+
+					roomSocket.addEventListener('error', function () {
+						setWsStatus('Room WS error', 'danger');
+					});
+				}
+
+				createClientButton.addEventListener('click', async function () {
+					const name = prompt('Client name:');
+					if (!name) return;
+
+					const description = prompt('Client description (optional):') || '';
+
+					createClientButton.disabled = true;
+					setWsStatus('Creating client...', 'warn');
+
+					try {
+						const res = await fetch('/api/v1/new/client', {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json'
+							},
+							body: JSON.stringify({ name: name, description: description })
+						});
+
+						const data = await res.json();
+
+						if (!res.ok) {
+							alert('Failed to create client: ' + (data.error || res.statusText));
+							setWsStatus('Room WS disconnected', 'warn');
+							return;
+						}
+
+						jwtInput.value = data.api_token;
+						localStorage.setItem(JWT_STORAGE_KEY, data.api_token);
+						alert('Client created: ' + data.id + '\nJWT token updated.');
+						connectRoomSocket();
+					} catch (err) {
+						alert('Network error: ' + err.message);
+						setWsStatus('Room WS disconnected', 'warn');
+					} finally {
+						createClientButton.disabled = false;
+					}
+				});
+
+				joinRoomButton.addEventListener('click', async function () {
+					const jwt = jwtInput.value.trim();
+					const roomId = roomIdInput.value.trim();
+
+					if (!jwt) {
+						alert('JWT token is required to join a room.');
+						return;
+					}
+
+					if (!roomId) {
+						alert('Room ID is required to join.');
+						return;
+					}
+
+					joinRoomButton.disabled = true;
+					setWsStatus('Joining room...', 'warn');
+
+					try {
+						const res = await fetch('/api/v1/join/room/' + encodeURIComponent(roomId), {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								'Authorization': 'Bearer ' + jwt
+							}
+						});
+
+						const data = await res.json();
+
+						if (!res.ok) {
+							alert('Failed to join room: ' + (data.error || res.statusText));
+							connectRoomSocket();
+							return;
+						}
+
+						alert('Joined room: ' + data.room_id + '\n' + data.message);
+						connectRoomSocket();
+					} catch (err) {
+						alert('Network error: ' + err.message);
+						setWsStatus('Room WS disconnected', 'warn');
+					} finally {
+						joinRoomButton.disabled = false;
+					}
+				});
+
+				createRoomButton.addEventListener('click', async function () {
+					const jwt = jwtInput.value.trim();
+					if (!jwt) {
+						alert('JWT token is required to create a room.');
+						return;
+					}
+
+					const roomName = prompt('Room name:');
+					if (!roomName) return;
+
+					const roomDescription = prompt('Room description (optional):') || '';
+					const gameRef = '{{ .GameName }}';
+
+					createRoomButton.disabled = true;
+					setWsStatus('Creating room...', 'warn');
+
+					try {
+						const res = await fetch('/api/v1/room/create', {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								'Authorization': 'Bearer ' + jwt
+							},
+							body: JSON.stringify({
+								name: roomName,
+								description: roomDescription,
+								game_ref: gameRef
+							})
+						});
+
+						const data = await res.json();
+
+						if (!res.ok) {
+							alert('Failed to create room: ' + (data.error || res.statusText));
+							connectRoomSocket();
+							return;
+						}
+
+						roomIdInput.value = data.id;
+						localStorage.setItem(ROOM_ID_STORAGE_KEY, data.id);
+						alert('Room created: ' + data.id + '\nRoom ID updated.');
+						connectRoomSocket();
+					} catch (err) {
+						alert('Network error: ' + err.message);
+						setWsStatus('Room WS disconnected', 'warn');
+					} finally {
+						createRoomButton.disabled = false;
+					}
 				});
 
 				function parseMultislot(value) {
@@ -424,6 +655,9 @@
 						}
 					});
 				});
+
+				// Connect to room WebSocket on page load if JWT and Room ID are available
+				connectRoomSocket();
 			})();
 		</script>
 	</body>
