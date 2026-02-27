@@ -1,0 +1,79 @@
+\ProvidesPackage{beamerthemerulemancerlight}
+
+\RequirePackage{graphicx}
+\RequirePackage{xcolor}
+\RequirePackage{tikz}
+
+\definecolor{rmDark}{HTML}{161512}
+\definecolor{rmMid}{HTML}{4D463B}
+\definecolor{rmGold}{HTML}{9D8655}
+\definecolor{rmLight}{HTML}{C4C3BB}
+\definecolor{rmPaper}{HTML}{EEE9DF}
+\definecolor{rmFrameBg}{HTML}{D8CDB7}
+\definecolor{rmPanel}{HTML}{E5DDCF}
+
+\newcommand{\rulemancerlogopath}{../logo.png}
+
+\mode<presentation>
+
+\setbeamercolor{normal text}{fg=rmDark,bg=rmPaper}
+\setbeamercolor{background canvas}{bg=rmPaper}
+\setbeamercolor{structure}{fg=rmGold}
+\setbeamercolor{title}{fg=rmDark}
+\setbeamercolor{subtitle}{fg=rmMid}
+\setbeamercolor{author}{fg=rmMid}
+\setbeamercolor{date}{fg=rmMid}
+\setbeamercolor{frametitle}{fg=rmDark,bg=rmFrameBg}
+\setbeamercolor{framesubtitle}{fg=rmMid,bg=rmFrameBg}
+\setbeamercolor{block title}{fg=rmDark,bg=rmLight!60}
+\setbeamercolor{block body}{fg=rmDark,bg=rmPanel!55}
+\setbeamercolor{footline}{fg=rmDark,bg=rmFrameBg!80}
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{items}[circle]
+\setbeamertemplate{headline}{}
+
+\setbeamertemplate{background}{
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[rmPaper] (current page.south west) rectangle (current page.north east);
+    \fill[rmLight!18] (current page.north west) rectangle ([yshift=-0.11\paperheight]current page.north east);
+    \fill[rmGold!10] ([yshift=0.06\paperheight]current page.south west) rectangle (current page.south east);
+    \draw[rmGold!18,line width=0.9pt] ([xshift=0.06\paperwidth,yshift=-0.18\paperheight]current page.north west) circle (1.25cm);
+    \draw[rmMid!14,line width=0.8pt] ([xshift=0.12\paperwidth,yshift=-0.22\paperheight]current page.north west) circle (0.72cm);
+    \node[anchor=south east,opacity=0.08,inner sep=0pt] at ([xshift=-0.04\paperwidth,yshift=0.05\paperheight]current page.south east)
+      {\includegraphics[width=0.33\paperwidth]{\rulemancerlogopath}};
+  \end{tikzpicture}
+}
+
+\setbeamertemplate{footline}{%
+  \leavevmode%
+  \hbox{%
+    \begin{beamercolorbox}[wd=.70\paperwidth,ht=2.8ex,dp=1.2ex,leftskip=1em]{footline}%
+      \usebeamerfont{footline}\insertshorttitle
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.20\paperwidth,ht=2.8ex,dp=1.2ex,center]{footline}%
+      \usebeamerfont{footline}\insertframenumber{} / \inserttotalframenumber
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.10\paperwidth,ht=2.8ex,dp=1.0ex,center]{footline}%
+      \includegraphics[height=2.0ex]{\rulemancerlogopath}
+    \end{beamercolorbox}%
+  }%
+}
+
+\setbeamertemplate{title page}{
+  \vbox{}
+  \vfill
+  \begin{center}
+    \includegraphics[width=0.20\paperwidth]{\rulemancerlogopath}\\[1.2em]
+    {\usebeamerfont{title}\usebeamercolor[fg]{title}\inserttitle\par}
+    \vspace{0.4em}
+    {\usebeamerfont{subtitle}\usebeamercolor[fg]{subtitle}\insertsubtitle\par}
+    \vspace{1.2em}
+    {\usebeamerfont{author}\insertauthor\par}
+    \vspace{0.4em}
+    {\usebeamerfont{date}\insertdate\par}
+  \end{center}
+  \vfill
+}
+
+\mode<all>
