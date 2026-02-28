@@ -108,7 +108,7 @@ This allows for:
 \end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{Installation}
+\begin{frame}{Installation}
 \begin{itemize}
 \item Clone the repository:
 \begin{block}{
@@ -156,7 +156,7 @@ Typical configuration options include:
   \end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{Running the Server}
+\begin{frame}{Running the Server}
 To start the server, choose a secret for JWT authentication and set it either as an environment variable or via the
 \texttt{--secret} flag and run the serve command:
 \vspace{0.3cm}
@@ -181,8 +181,7 @@ The server listens on the configured port (default: 3000) and serves the API und
 \end{frame}
 
 
-\begin{frame}[fragile]{Tokens}
-
+\begin{frame}{Tokens}
 A script is provided to launch the server and capture the admin token in an environment variable for convenience:
 \begin{block}{
 source ./interface/[gameName]/launch.sh
@@ -200,6 +199,76 @@ This will create a new client with a default name and description and store the 
 in the \texttt{API\_TOKEN} environment variable for subsequent API calls.
 \end{frame}
 
+
+\begin{frame}[fragile]{Games}
+  \begin{columns}
+    \begin{column}{0.6\textwidth}
+      Rulemancer supports multiple games running concurrently, each defined by a directory containing CLIPS rules and metadata.
+      The configuration option \texttt{games} specifies which directories to load at startup. \\
+      \vspace{0.4cm}
+      Games cannot be added or removed at runtime, but multiple rooms of the same game can be created dynamically. \\
+      \vspace{0.4cm}
+      Each game must define a set of required CLIPS templates to establish the interface contract with the server.
+    \end{column}
+    \begin{column}{0.4\textwidth}
+        \small
+        \begin{verbatim}
+(deftemplate game-config
+  (slot game-name)
+  (slot description)
+  (slot num-players))
+
+(deftemplate assertable
+  (slot name)
+  (multislot relations))
+
+(deftemplate results
+  (slot name)
+  (multislot relations))
+
+(deftemplate queryable
+  (slot name)
+  (multislot relations))
+        \end{verbatim}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{A game's Interface Contract in CLIPS}
+To be recognized by Rulemancer, each game must define some CLIPS templates. The \texttt{game-config} template 
+provides basic metadata about the game, its name, description, and number of players. \\
+\vspace{0.3cm}
+These other templates define the interface contract between the CLIPS rules and the server's API layer:
+\begin{itemize}
+  \item \texttt{assertable} defines accepted client actions (a.k.a. the moves or commands that players can perform).
+  \item \texttt{results} defines the facts that will be returned to clients after processing a specific action.
+  \item \texttt{queryable} defines any game state information that clients can query for at any time.
+\end{itemize}
+All of these templates use a flexible multislot to choose the specific relations inside the CLIPS environment.
+\end{frame}
+
+\begin{frame}{Interface built}
+The subcommand \texttt{./rulemancer build} uses the aforementioned CLIPS templates to generate
+additional interface files for each game, which are stored in the \texttt{interface/} directory. \\
+\vspace{0.4cm}
+These files are shell scripts that contain cURL commands for interacting with the server's API
+according to the defined games and their assertable/queryable facts. \\
+\vspace{0.4cm}
+This allows developers to have a ready-made set of commands for testing and interacting with the server based
+on the CLIPS rules they have defined, without needing to manually construct API requests. \\
+\vspace{0.4cm}
+The \texttt{make} command runs the build process automatically after compiling the server.
+\end{frame}
+
+% \begin{frame}{Interface built from CLIPS}
+% Rulemancer automatically generates REST API endpoints based on the \texttt{assertable} and \texttt{queryable} templates defined in the CLIPS rules. \\
+% \vspace{0.3cm}
+% For each \texttt{assertable} fact, an endpoint of the form \texttt{/api/v1/room/\{id\}/assert/\{action\}} is created, where \texttt{\{action\}} corresponds to the name of the assertable fact. \\
+% \vspace{0.3cm}
+% Similarly, for each \texttt{queryable} fact, an endpoint of the form \texttt{/api/v1/room/\{id\}/query/\{query\}} is created. \\
+% \vspace{0.3cm}
+% This design allows game developers to define their game logic and API surface purely through CLIPS rules, without needing to write any additional server code for routing or request handling.
+% \end{frame}
 
 % \begin{frame}{Core Features}
 % \begin{itemize}
@@ -315,28 +384,6 @@ in the \texttt{API\_TOKEN} environment variable for subsequent API calls.
 % \end{itemize}
 % \end{frame}
 
-% \begin{frame}{Defining a New Game}
-% \begin{itemize}
-%   \item Create metadata \texttt{.clp} in \texttt{rulepool/}.
-%   \item Required templates:
-%   \begin{itemize}
-%     \item \texttt{game-config}
-%     \item \texttt{assertable}
-%     \item \texttt{results}
-%     \item \texttt{queryable}
-%   \end{itemize}
-%   \item Then add game-specific rules/templates for internal logic.
-% \end{itemize}
-% \end{frame}
-
-% \begin{frame}{Interface Contract in CLIPS}
-% \begin{itemize}
-%   \item \texttt{assertable} defines accepted external actions.
-%   \item \texttt{results} defines returned facts after processing.
-%   \item \texttt{queryable} defines readable game state.
-%   \item Rulemancer turns these contracts into REST interaction surfaces.
-% \end{itemize}
-% \end{frame}
 
 % \begin{frame}{Example: Tic-Tac-Toe}
 % \begin{itemize}

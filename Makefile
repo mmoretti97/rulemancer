@@ -11,3 +11,5 @@ rulemancer:
 clean:
 	@rm -f ./rulemancer
 	@rm -rf ./interface
+	@make -C docs --no-print-directory clean
+	@make -C pkg --no-print-directory clean
