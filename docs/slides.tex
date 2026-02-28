@@ -260,15 +260,22 @@ on the CLIPS rules they have defined, without needing to manually construct API 
 The \texttt{make} command runs the build process automatically after compiling the server.
 \end{frame}
 
-% \begin{frame}{Interface built from CLIPS}
-% Rulemancer automatically generates REST API endpoints based on the \texttt{assertable} and \texttt{queryable} templates defined in the CLIPS rules. \\
-% \vspace{0.3cm}
-% For each \texttt{assertable} fact, an endpoint of the form \texttt{/api/v1/room/\{id\}/assert/\{action\}} is created, where \texttt{\{action\}} corresponds to the name of the assertable fact. \\
-% \vspace{0.3cm}
-% Similarly, for each \texttt{queryable} fact, an endpoint of the form \texttt{/api/v1/room/\{id\}/query/\{query\}} is created. \\
-% \vspace{0.3cm}
-% This design allows game developers to define their game logic and API surface purely through CLIPS rules, without needing to write any additional server code for routing or request handling.
-% \end{frame}
+\begin{frame}{API Overview}
+The server exposes a REST API under the \texttt{/api/v1} route, which is organized into several sub-routes
+for different functionalities:
+\vspace{0.3cm}
+\begin{itemize}
+  \item \texttt{/system} $\rightarrow$ health, shutdown, system websocket.
+  \vspace{0.3cm}
+  \item \texttt{/client} $\rightarrow$ list, current, details, delete.
+  \vspace{0.3cm}
+  \item \texttt{/game} $\rightarrow$ list and game metadata.
+  \vspace{0.3cm}
+  \item \texttt{/room} $\rightarrow$ create/list/get/delete + assert/query/ws.
+  \vspace{0.3cm}
+  \item \texttt{/join} and \texttt{/watch} $\rightarrow$ room participation workflows.
+\end{itemize}
+\end{frame}
 
 % \begin{frame}{Core Features}
 % \begin{itemize}
@@ -280,38 +287,6 @@ The \texttt{make} command runs the build process automatically after compiling t
 % \end{itemize}
 % \end{frame}
 
-% \begin{frame}{High-Level Architecture}
-% \begin{itemize}
-%   \item \textbf{Rule files} in \texttt{rulepool/} define game interface and behavior.
-%   \item \textbf{Engine} loads games at startup and creates isolated room instances.
-%   \item \textbf{API layer} maps HTTP endpoints to assert/query operations.
-%   \item \textbf{WebSocket layer} broadcasts room activity in real time.
-%   \item \textbf{Web client templates} render dynamic admin/game pages.
-% \end{itemize}
-% \end{frame}
-
-% \begin{frame}{Repository Structure}
-% \begin{itemize}
-%   \item \texttt{cmd/} $\rightarrow$ CLI commands (\texttt{serve}, \texttt{build}, \texttt{test}).
-%   \item \texttt{pkg/rulemancer/} $\rightarrow$ engine, API handlers, monitor/websocket, templating.
-%   \item \texttt{core/} $\rightarrow$ CLIPS C sources and headers.
-%   \item \texttt{rulepool/} $\rightarrow$ game rules + metadata (\texttt{*.clp}).
-%   \item \texttt{testpool/} $\rightarrow$ CLIPS test facts/scenarios.
-% \end{itemize}
-% \end{frame}
-
-
-
-
-
-% \begin{frame}{CLI Workflow}
-% \begin{itemize}
-%   \item \texttt{./rulemancer test} $\rightarrow$ load \texttt{rulepool/} + \texttt{testpool/} into CLIPS and run checks.
-%   \item \texttt{./rulemancer build} $\rightarrow$ generate extra interfaces (default output: \texttt{interface/}).
-%   \item \texttt{./rulemancer serve} $\rightarrow$ launch HTTPS API + web routes.
-%   \item Simple dev cycle: \textbf{edit rules $\rightarrow$ test $\rightarrow$ build extras $\rightarrow$ serve}.
-% \end{itemize}
-% \end{frame}
 
 % \begin{frame}{Security Model (JWT)}
 % \begin{itemize}
@@ -325,15 +300,6 @@ The \texttt{make} command runs the build process automatically after compiling t
 % \end{itemize}
 % \end{frame}
 
-% \begin{frame}{API Overview}
-% \begin{itemize}
-%   \item \texttt{/system} $\rightarrow$ health, shutdown, system websocket.
-%   \item \texttt{/client} $\rightarrow$ list, current, details, delete.
-%   \item \texttt{/game} $\rightarrow$ list and game metadata.
-%   \item \texttt{/room} $\rightarrow$ create/list/get/delete + assert/query/ws.
-%   \item \texttt{/join} and \texttt{/watch} $\rightarrow$ room participation workflows.
-% \end{itemize}
-% \end{frame}
 
 % \begin{frame}{Typical Player Journey}
 % \begin{enumerate}
@@ -370,19 +336,24 @@ The \texttt{make} command runs the build process automatically after compiling t
 % \end{itemize}
 % \end{frame}
 
-% \begin{frame}{Real-Time Communication}
-% \begin{itemize}
-%   \item System monitor websocket:
-%   \begin{itemize}
-%     \item \texttt{wss://localhost:3000/api/v1/system/ws} (admin)
-%   \end{itemize}
-%   \item Room websocket:
-%   \begin{itemize}
-%     \item \texttt{wss://localhost:3000/api/v1/room/\{id\}/ws}
-%   \end{itemize}
-%   \item Trigger model: each assert broadcasts room notifications to connected clients/watchers.
-% \end{itemize}
-% \end{frame}
+\begin{frame}{Real-Time Communication}
+The client interactions described so far are based on a request-response model using REST API,
+which is suitable for most game actions and queries. However, for real-time updates and monitoring, 
+Rulemancer also provides WebSocket endpoints that clients can connect to for live streaming of events
+and state changes. \\
+\vspace{0.3cm}
+\begin{itemize}
+  \item System monitor websocket:
+  \begin{itemize}
+    \item \texttt{wss://localhost:3000/api/v1/system/ws} (admin)
+  \end{itemize}
+  \item Room websocket:
+  \begin{itemize}
+    \item \texttt{wss://localhost:3000/api/v1/room/\{id\}/ws} (players and watchers)
+  \end{itemize}
+  \item Trigger model: each assert broadcasts room notifications to connected clients/watchers.
+\end{itemize}
+\end{frame}
 
 
 % \begin{frame}{Example: Tic-Tac-Toe}
@@ -394,78 +365,73 @@ The \texttt{make} command runs the build process automatically after compiling t
 % \end{itemize}
 % \end{frame}
 
-% \begin{frame}{Web Interface (Built-In)}
-% \begin{itemize}
-%   \item Route family mounted at \texttt{/api/v1/web}.
-%   \item Dynamic pages are generated from templates at startup.
-%   \item Admin page and game-specific client pages are served directly by backend.
-%   \item Example game page path: \texttt{/api/v1/web/client/\{gameName\}}.
-% \end{itemize}
-% \end{frame}
+\begin{frame}{Web Interface (Built-In for Game Development and Debugging)}
+The engine includes a built-in web interface for monitoring and interacting with games, 
+which is automatically generated from templates at startup. \\
+\vspace{0.2cm}
+Characteristics of the web interface: 
+\vspace{0.2cm}
+\begin{itemize}
+  \item Route family mounted at \texttt{/api/v1/web}.
+  \vspace{.2cm}
+  \item Dynamic pages are generated from templates at startup according to the defined assertable/queryable facts in the CLIPS rules.
+  \vspace{.2cm}
+  \item Admin page and game-specific client pages are served directly by backend.
+  \vspace{.2cm}
+  \item Admin page path: \texttt{/api/v1/web/admin/dashboard}.
+  \vspace{.2cm}
+  \item Game chooser page at  \texttt{/api/v1/web/client/chooser}, Example game page path: \texttt{/api/v1/web/client/\{gameName\}}.
+\end{itemize}
+\end{frame}
 
-% \begin{frame}{Admin Dashboard Capabilities}
-% \begin{itemize}
-%   \item Login with admin JWT.
-%   \item Browse games, rooms, and clients.
-%   \item Inspect object details and payloads.
-%   \item Connect to room websockets for live monitoring.
-%   \item Operational controls include server-oriented actions.
-% \end{itemize}
-% \end{frame}
+\begin{frame}{Admin Dashboard Capabilities}
+\begin{itemize}
+  \item Login with admin JWT.
+  \item Browse games, rooms, and clients.
+  \item Inspect object details and payloads.
+  \item Connect to system websockets for live monitoring of server events.
+\end{itemize}
+\end{frame}
 
-% \begin{frame}{Game Client Page Capabilities}
-% \begin{itemize}
-%   \item Enter JWT + room context.
-%   \item Render assert forms from game protocol data.
-%   \item Trigger query actions and view structured responses.
-%   \item Open websocket stream for live room events.
-%   \item Useful for rapid prototyping and debugging game interfaces.
-% \end{itemize}
-% \end{frame}
+\begin{frame}{Game Client Page Capabilities}
+\begin{itemize}
+  \item Enter JWT + room context.
+  \item Render assert forms from game protocol data.
+  \item Trigger query actions and view structured responses.
+  \item Open websocket stream for live room events.
+  \item Useful for rapid prototyping and debugging game interfaces.
+\end{itemize}
+\end{frame}
 
-% \begin{frame}{Demo Flow, Limits, and Next Steps}
-% \begin{itemize}
-%   \item \textbf{Live demo sequence:}
-%   \begin{enumerate}
-%     \item Start server and capture admin token.
-%     \item Create two clients and join a room.
-%     \item Execute moves via API/web page.
-%     \item Observe real-time websocket updates.
-%   \end{enumerate}
-%   \item \textbf{Current strengths:} rule-driven extensibility, room isolation, real-time monitoring.
-%   \item \textbf{Next steps:} richer frontend UX, stronger authorization policies, packaged deployment profiles.
-% \end{itemize}
-% \end{frame}
+\begin{frame}[fragile]{Appendix A — Useful cURL Snippets}
+\textbf{Create client}
+\begin{verbatim}
+curl -k -X POST https://localhost:3000/api/v1/new/client \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Alice","description":"Player"}'
+\end{verbatim}
 
-% \begin{frame}[fragile]{Appendix A — Useful cURL Snippets}
-% \textbf{Create client}
-% \begin{verbatim}
-% curl -k -X POST https://localhost:3000/api/v1/new/client \
-%   -H "Content-Type: application/json" \
-%   -d '{"name":"Alice","description":"Player"}'
-% \end{verbatim}
+\textbf{Join available room}
+\begin{verbatim}
+curl -k -X POST https://localhost:3000/api/v1/join/available/tictactoe \
+  -H "Authorization: Bearer $API_TOKEN"
+\end{verbatim}
 
-% \textbf{Join available room}
-% \begin{verbatim}
-% curl -k -X POST https://localhost:3000/api/v1/join/available/tictactoe \
-%   -H "Authorization: Bearer $API_TOKEN"
-% \end{verbatim}
+\textbf{Assert move (tic-tac-toe example)}
+\begin{verbatim}
+curl -k -X POST https://localhost:3000/api/v1/room/$ROOM_ID/assert/move \
+  -H "Authorization: Bearer $API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"move":[{"x":["1"],"y":["1"],"player":["x"]}]}'
+\end{verbatim}
+\end{frame}
 
-% \textbf{Assert move}
-% \begin{verbatim}
-% curl -k -X POST https://localhost:3000/api/v1/room/$ROOM_ID/assert/move \
-%   -H "Authorization: Bearer $API_TOKEN" \
-%   -H "Content-Type: application/json" \
-%   -d '{"move":[{"x":["1"],"y":["1"],"player":["x"]}]}'
-% \end{verbatim}
-% \end{frame}
-
-% \begin{frame}{Appendix B — Error Model and HTTP Statuses}
-% \begin{itemize}
-%   \item Error body format: \texttt{\{ "error": "message" \}}
-%   \item Common statuses: \texttt{200}, \texttt{201}, \texttt{400}, \texttt{401}, \texttt{404}, \texttt{409}, \texttt{500}
-%   \item Recommended client behavior: handle auth expiration, retry idempotent reads, surface server message for debugging.
-% \end{itemize}
-% \end{frame}
+\begin{frame}{Appendix B — Error Model and HTTP Statuses}
+\begin{itemize}
+  \item Error body format: \texttt{\{ "error": "message" \}}
+  \item Common statuses: \texttt{200}, \texttt{201}, \texttt{400}, \texttt{401}, \texttt{404}, \texttt{409}, \texttt{500}
+  \item Recommended client behavior: handle auth expiration, retry idempotent reads, surface server message for debugging.
+\end{itemize}
+\end{frame}
 
 \end{document}
