@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Rulemancer - Game Chooser</title>
+		<style>
+			:root {
+				color-scheme: light;
+				--bg: #f6f8fa;
+				--panel: #ffffff;
+				--text: #1f2328;
+				--muted: #57606a;
+				--border: #d0d7de;
+				--primary: #2f3b52;
+				--primary-weak: #e6ebf2;
+			}
+
+			* {
+				box-sizing: border-box;
+			}
+
+			body {
+				font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+				margin: 0;
+				background: var(--bg);
+				color: var(--text);
+			}
+
+			header {
+				padding: 20px 24px;
+				background: var(--panel);
+				border-bottom: 1px solid var(--border);
+			}
+
+			h1 {
+				font-size: 20px;
+				margin: 0;
+			}
+
+			p {
+				margin: 6px 0 0 0;
+				color: var(--muted);
+			}
+
+			main {
+				padding: 24px;
+			}
+
+			.panel {
+				max-width: 520px;
+				background: var(--panel);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				padding: 16px;
+			}
+
+			label {
+				display: block;
+				margin: 0 0 8px 0;
+				font-size: 14px;
+				color: var(--muted);
+				font-weight: 600;
+			}
+
+			select {
+				width: 100%;
+				padding: 10px 12px;
+				border: 1px solid var(--border);
+				border-radius: 6px;
+				background: #ffffff;
+				color: var(--text);
+				margin-bottom: 12px;
+			}
+
+			button {
+				padding: 10px 16px;
+				border: 1px solid var(--primary);
+				background: var(--primary);
+				color: #ffffff;
+				border-radius: 6px;
+				cursor: pointer;
+				font-weight: 600;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<h1>Choose a game</h1>
+			<p>Select one of the available games to continue.</p>
+		</header>
+
+		<main>
+			<section class="panel">
+				<label for="game-select">Available games</label>
+				<select id="game-select" name="game">
+					<option value="" selected disabled>-- choose a game --</option>
+					{{range .GameNames}}
+					<option value="{{.}}">{{.}}</option>
+					{{end}}
+				</select>
+
+				<button id="go-button" type="button">Go to game</button>
+			</section>
+		</main>
+
+		<script>
+			(function () {
+				const select = document.getElementById('game-select');
+				const button = document.getElementById('go-button');
+
+				function goToSelectedGame() {
+					const gameName = select.value;
+					if (!gameName) {
+						return;
+					}
+					window.location.href = './' + encodeURIComponent(gameName);
+				}
+
+				button.addEventListener('click', goToSelectedGame);
+				select.addEventListener('change', goToSelectedGame);
+			})();
+		</script>
+	</body>
+</html>

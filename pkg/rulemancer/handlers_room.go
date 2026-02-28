@@ -146,7 +146,6 @@ func (e *Engine) apiDeleteRoom(w http.ResponseWriter, r *http.Request) {
 }
 
 func (e *Engine) apiListRooms(w http.ResponseWriter, r *http.Request) {
-
 	_, claims, err := jwtauth.FromContext(r.Context())
 
 	if err != nil {

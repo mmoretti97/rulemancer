@@ -1,0 +1,862 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Rulemancer - Admin Dashboard</title>
+		<style>
+			:root {
+				color-scheme: light;
+				--bg: #f6f8fa;
+				--panel: #ffffff;
+				--text: #1f2328;
+				--muted: #57606a;
+				--border: #d0d7de;
+				--primary: #2f3b52;
+				--primary-weak: #e6ebf2;
+				--danger: #b42318;
+				--ok: #067d68;
+				--warning: #f59e0b;
+			}
+
+			* {
+				box-sizing: border-box;
+			}
+
+			body {
+				font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+				margin: 0;
+				background: var(--bg);
+				color: var(--text);
+			}
+
+			header {
+				padding: 20px 24px;
+				background: var(--panel);
+				border-bottom: 1px solid var(--border);
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 16px;
+				flex-wrap: wrap;
+			}
+
+			main {
+				padding: 24px;
+			}
+
+			h1 {
+				font-size: 20px;
+				margin: 0;
+			}
+
+			p {
+				margin: 6px 0 0 0;
+				color: var(--muted);
+			}
+
+			button {
+				padding: 10px 16px;
+				border: 1px solid var(--primary);
+				background: var(--primary);
+				color: #ffffff;
+				border-radius: 6px;
+				cursor: pointer;
+				font-weight: 600;
+			}
+
+			button.secondary {
+				background: #ffffff;
+				color: var(--primary);
+			}
+
+			button.danger {
+				border-color: var(--danger);
+				background: var(--danger);
+			}
+
+			button:disabled {
+				opacity: 0.6;
+				cursor: not-allowed;
+			}
+
+			input[type="text"] {
+				padding: 10px 12px;
+				border: 1px solid var(--border);
+				border-radius: 6px;
+				min-width: 280px;
+			}
+
+			.toolbar {
+				display: flex;
+				gap: 8px;
+				align-items: center;
+				flex-wrap: wrap;
+			}
+
+			.tabs {
+				display: flex;
+				gap: 8px;
+				margin: 16px 0 24px 0;
+			}
+
+			.tab {
+				padding: 10px 16px;
+				border-radius: 999px;
+				border: 1px solid var(--border);
+				background: var(--panel);
+				cursor: pointer;
+				color: var(--muted);
+				font-weight: 600;
+			}
+
+			.tab.active {
+				background: var(--primary-weak);
+				color: var(--primary);
+				border-color: var(--primary);
+			}
+
+			.section {
+				display: none;
+			}
+
+			.section.active {
+				display: grid;
+				grid-template-columns: 1fr 2fr;
+				gap: 20px;
+			}
+
+			.panel {
+				background: var(--panel);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				padding: 16px;
+			}
+
+			.panel h2 {
+				margin: 0 0 12px 0;
+				font-size: 16px;
+			}
+
+			.list {
+				display: flex;
+				flex-direction: column;
+				gap: 8px;
+			}
+
+			.list button {
+				text-align: left;
+				background: #ffffff;
+				color: var(--text);
+				border: 1px solid var(--border);
+				padding: 12px;
+				font-weight: 500;
+			}
+
+			.list button.active {
+				border-color: var(--primary);
+				background: var(--primary-weak);
+			}
+
+			.kv {
+				display: grid;
+				grid-template-columns: 160px 1fr;
+				gap: 8px 12px;
+				font-size: 14px;
+			}
+
+			.kv div {
+				padding: 4px 0;
+			}
+
+			.kv .label {
+				color: var(--muted);
+				font-weight: 600;
+			}
+
+			pre {
+				background: #0b0f14;
+				color: #e6edf3;
+				padding: 12px;
+				border-radius: 8px;
+				overflow: auto;
+				font-size: 12px;
+			}
+
+			.badge {
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				padding: 4px 10px;
+				border-radius: 999px;
+				background: var(--primary-weak);
+				color: var(--primary);
+				font-size: 12px;
+				font-weight: 600;
+			}
+
+			.badge.ok {
+				background: #e7f8f4;
+				color: var(--ok);
+			}
+
+			.badge.warn {
+				background: #fff5e6;
+				color: var(--warning);
+			}
+
+			.badge.danger {
+				background: #feeceb;
+				color: var(--danger);
+			}
+
+			.status {
+				color: var(--muted);
+				font-size: 13px;
+				min-height: 20px;
+			}
+
+			.empty {
+				color: var(--muted);
+				font-size: 14px;
+			}
+
+			.actions {
+				margin-top: 12px;
+				display: flex;
+				gap: 8px;
+				flex-wrap: wrap;
+			}
+
+			.grid-two {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 12px;
+			}
+
+			@media (max-width: 980px) {
+				.section.active {
+					grid-template-columns: 1fr;
+				}
+
+				.kv {
+					grid-template-columns: 1fr;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<div>
+				<h1>Admin dashboard</h1>
+				<p>Full management of games, rooms, and clients.</p>
+			</div>
+			<div class="toolbar">
+				<span id="ws-status" class="badge warn">System WS disconnected</span>
+				<input id="jwt-input" type="text" placeholder="Admin JWT" />
+				<button id="save-jwt" class="secondary" type="button">Save JWT</button>
+				<button id="refresh-all" type="button">Refresh all</button>
+			</div>
+		</header>
+
+		<main>
+			<div class="tabs">
+				<button class="tab active" data-section="games">Games</button>
+				<button class="tab" data-section="rooms">Rooms</button>
+				<button class="tab" data-section="clients">Clients</button>
+			</div>
+
+			<div class="status" id="status"></div>
+
+			<section class="section active" id="section-games">
+				<div class="panel">
+					<h2>Games list</h2>
+					<div class="actions">
+						<button id="refresh-games" class="secondary" type="button">Refresh games</button>
+					</div>
+					<div class="list" id="games-list"></div>
+				</div>
+				<div class="panel">
+					<h2>Game details</h2>
+					<div id="game-detail" class="empty">Select a game.</div>
+				</div>
+			</section>
+
+			<section class="section" id="section-rooms">
+				<div class="panel">
+					<h2>Rooms list</h2>
+					<div class="actions">
+						<button id="refresh-rooms" class="secondary" type="button">Refresh rooms</button>
+					</div>
+					<div class="list" id="rooms-list"></div>
+				</div>
+				<div class="panel">
+					<h2>Room details</h2>
+					<div id="room-detail" class="empty">Select a room.</div>
+				</div>
+			</section>
+
+			<section class="section" id="section-clients">
+				<div class="panel">
+					<h2>Clients list</h2>
+					<div class="actions">
+						<button id="refresh-clients" class="secondary" type="button">Refresh clients</button>
+					</div>
+					<div class="list" id="clients-list"></div>
+				</div>
+				<div class="panel">
+					<h2>Client details</h2>
+					<div id="client-detail" class="empty">Select a client.</div>
+				</div>
+			</section>
+		</main>
+
+		<script>
+			(function () {
+				const status = document.getElementById("status");
+				const wsStatus = document.getElementById("ws-status");
+				const jwtInput = document.getElementById("jwt-input");
+				const saveJwtButton = document.getElementById("save-jwt");
+				const refreshAllButton = document.getElementById("refresh-all");
+
+				const gamesList = document.getElementById("games-list");
+				const roomsList = document.getElementById("rooms-list");
+				const clientsList = document.getElementById("clients-list");
+				const gameDetail = document.getElementById("game-detail");
+				const roomDetail = document.getElementById("room-detail");
+				const clientDetail = document.getElementById("client-detail");
+
+				const refreshGamesButton = document.getElementById("refresh-games");
+				const refreshRoomsButton = document.getElementById("refresh-rooms");
+				const refreshClientsButton = document.getElementById("refresh-clients");
+
+				let systemSocket = null;
+
+				const state = {
+					games: [],
+					rooms: [],
+					clients: [],
+					gameDetails: new Map(),
+					roomDetails: new Map(),
+					clientDetails: new Map(),
+					roomsDetailPromise: null,
+					selectedGameId: null,
+					selectedRoomId: null,
+					selectedClientId: null,
+				};
+
+				function setStatus(message, type) {
+					status.textContent = message || "";
+					status.style.color = type === "error" ? "#b42318" : "";
+				}
+
+				function setWsStatus(text, variant) {
+					wsStatus.textContent = text;
+					wsStatus.classList.remove("ok", "warn", "danger");
+					if (variant) {
+						wsStatus.classList.add(variant);
+					}
+				}
+
+				function getJwt() {
+					return (
+						window.RULEMANCER_JWT ||
+						localStorage.getItem("rulemancer_jwt") ||
+						""
+					);
+				}
+
+				function setJwt(jwt) {
+					if (jwt) {
+						localStorage.setItem("rulemancer_jwt", jwt);
+					} else {
+						localStorage.removeItem("rulemancer_jwt");
+					}
+					syncJwtCookie(jwt);
+				}
+
+				function syncJwtCookie(jwt) {
+					if (!jwt) {
+						document.cookie = "jwt=; Path=/; Max-Age=0; SameSite=Strict";
+						return;
+					}
+					const secureFlag = location.protocol === "https:" ? "; Secure" : "";
+					document.cookie = `jwt=${encodeURIComponent(jwt)}; Path=/; SameSite=Strict${secureFlag}`;
+				}
+
+				async function apiFetch(path, options = {}) {
+					const jwt = getJwt();
+					if (!jwt) {
+						throw new Error("Missing JWT. Use the field above or window.RULEMANCER_JWT.");
+					}
+					const response = await fetch(path, {
+						method: options.method || "GET",
+						headers: {
+							"Content-Type": "application/json",
+							Authorization: "Bearer " + jwt,
+							...(options.headers || {}),
+						},
+						body: options.body ? JSON.stringify(options.body) : undefined,
+					});
+
+					const text = await response.text();
+					let payload = {};
+					if (text) {
+						try {
+							payload = JSON.parse(text);
+						} catch (error) {
+							throw new Error("Invalid JSON response");
+						}
+					}
+					if (!response.ok) {
+						const message = payload.error || payload.message || response.statusText;
+						throw new Error(message || "Request failed");
+					}
+					return payload;
+				}
+
+				function clearActive(list) {
+					list.querySelectorAll("button").forEach((button) => {
+						button.classList.remove("active");
+					});
+				}
+
+				function setActiveByValue(list, value) {
+					if (!value) {
+						return;
+					}
+					const button = Array.from(list.querySelectorAll("button")).find(
+						(item) => item.textContent === value
+					);
+					if (button) {
+						button.classList.add("active");
+					}
+				}
+
+				function renderList(container, items, onClick, emptyMessage, selectedId) {
+					container.textContent = "";
+					if (!items || items.length === 0) {
+						const empty = document.createElement("div");
+						empty.className = "empty";
+						empty.textContent = emptyMessage;
+						container.appendChild(empty);
+						return;
+					}
+					items.forEach((item) => {
+						const button = document.createElement("button");
+						button.type = "button";
+						button.textContent = item;
+						if (selectedId && selectedId === item) {
+							button.classList.add("active");
+						}
+						button.addEventListener("click", () => {
+							clearActive(container);
+							button.classList.add("active");
+							onClick(item);
+						});
+						container.appendChild(button);
+					});
+				}
+
+				function formatJson(data) {
+					return JSON.stringify(data, null, 2);
+				}
+
+				async function loadGames() {
+					setStatus("Loading games...");
+					const payload = await apiFetch("/api/v1/game/list");
+					state.games = payload.games || [];
+					renderList(
+						gamesList,
+						state.games,
+						(id) => showGameDetail(id),
+						"No games available.",
+						state.selectedGameId
+					);
+					setStatus("Games loaded.");
+				}
+
+				async function loadRooms() {
+					setStatus("Loading rooms...");
+					const payload = await apiFetch("/api/v1/room/list");
+					state.rooms = payload.rooms || [];
+					state.roomDetails.clear();
+					state.roomsDetailPromise = null;
+					renderList(
+						roomsList,
+						state.rooms,
+						(id) => showRoomDetail(id),
+						"No active rooms.",
+						state.selectedRoomId
+					);
+					setStatus("Rooms loaded.");
+					if (state.selectedRoomId) {
+						setActiveByValue(roomsList, state.selectedRoomId);
+					}
+				}
+
+				async function loadClients() {
+					setStatus("Loading clients...");
+					const payload = await apiFetch("/api/v1/client/list");
+					state.clients = payload.clients || [];
+					renderList(
+						clientsList,
+						state.clients,
+						(id) => showClientDetail(id),
+						"No clients registered.",
+						state.selectedClientId
+					);
+					setStatus("Clients loaded.");
+					if (state.selectedClientId) {
+						setActiveByValue(clientsList, state.selectedClientId);
+					}
+				}
+
+				async function loadAll() {
+					try {
+						refreshAllButton.disabled = true;
+						await Promise.all([loadGames(), loadRooms(), loadClients()]);
+					} catch (error) {
+						setStatus("Error: " + error.message, "error");
+					} finally {
+						refreshAllButton.disabled = false;
+					}
+				}
+
+				async function showGameDetail(id) {
+					state.selectedGameId = id;
+					gameDetail.textContent = "Loading...";
+					try {
+						let detail = state.gameDetails.get(id);
+						if (!detail) {
+							detail = await apiFetch(`/api/v1/game/${id}`);
+							state.gameDetails.set(id, detail);
+						}
+
+						gameDetail.innerHTML = `
+							<div class="kv">
+								<div class="label">ID</div>
+								<div>${detail.id || id}</div>
+								<div class="label">Name</div>
+								<div>${detail.name || ""}</div>
+								<div class="label">Description</div>
+								<div>${detail.description || ""}</div>
+								<div class="label">Rules</div>
+								<div>${detail.rules ? "Available" : ""}</div>
+							</div>
+							<h3>Configuration</h3>
+							<div class="grid-two">
+								<div>
+									<strong>Assertable</strong>
+									<pre>${formatJson(detail.assertable || {})}</pre>
+								</div>
+								<div>
+									<strong>Queryable</strong>
+									<pre>${formatJson(detail.queryable || {})}</pre>
+								</div>
+								<div>
+									<strong>Responses</strong>
+									<pre>${formatJson(detail.responses || {})}</pre>
+								</div>
+								<div>
+									<strong>Rules (text)</strong>
+									<pre>${detail.rules ? detail.rules : ""}</pre>
+								</div>
+							</div>
+						`;
+					} catch (error) {
+						gameDetail.textContent = "Error: " + error.message;
+					}
+				}
+
+				async function ensureRoomDetails() {
+					if (state.roomsDetailPromise) {
+						return state.roomsDetailPromise;
+					}
+					state.roomsDetailPromise = (async () => {
+						const roomIds = state.rooms || [];
+						for (const roomId of roomIds) {
+							if (!state.roomDetails.has(roomId)) {
+								try {
+									const detail = await apiFetch(`/api/v1/room/${roomId}`);
+									state.roomDetails.set(roomId, detail);
+								} catch (error) {
+									state.roomDetails.set(roomId, { id: roomId, error: error.message });
+								}
+							}
+						}
+					})();
+					return state.roomsDetailPromise;
+				}
+
+				async function showRoomDetail(id) {
+					state.selectedRoomId = id;
+					roomDetail.textContent = "Loading...";
+					try {
+						let detail = state.roomDetails.get(id);
+						if (!detail || detail.error) {
+							detail = await apiFetch(`/api/v1/room/${id}`);
+							state.roomDetails.set(id, detail);
+						}
+
+						const websocketAddress = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/v1/room/${id}/ws`;
+						const playing = detail.playing_clients ? Object.keys(detail.playing_clients) : [];
+						const watching = detail.watching_clients ? Object.keys(detail.watching_clients) : [];
+						const sockets = detail.connected_sockets || {};
+
+						roomDetail.innerHTML = `
+							<div class="kv">
+								<div class="label">ID</div>
+								<div>${detail.id || id}</div>
+								<div class="label">Name</div>
+								<div>${detail.name || ""}</div>
+								<div class="label">Description</div>
+								<div>${detail.description || ""}</div>
+								<div class="label">Game</div>
+								<div>${detail.running_game || ""}</div>
+								<div class="label">Capacity</div>
+								<div>${detail.num_clients || ""}</div>
+								<div class="label">WebSocket</div>
+								<div>${websocketAddress}</div>
+							</div>
+							<div class="grid-two" style="margin-top: 12px;">
+								<div>
+									<strong>Players</strong>
+									<pre>${formatJson(playing)}</pre>
+								</div>
+								<div>
+									<strong>Watchers</strong>
+									<pre>${formatJson(watching)}</pre>
+								</div>
+								<div>
+									<strong>Sockets</strong>
+									<pre>${formatJson(sockets)}</pre>
+								</div>
+								<div>
+									<strong>CLIPS</strong>
+									<pre>${formatJson(detail.clips_instance || {})}</pre>
+								</div>
+							</div>
+							<div class="actions">
+								<button class="danger" type="button" data-room-delete="${id}">Delete room</button>
+							</div>
+							<h3>Full details</h3>
+							<pre>${formatJson(detail)}</pre>
+						`;
+						bindRoomActions();
+					} catch (error) {
+						roomDetail.textContent = "Error: " + error.message;
+					}
+				}
+
+				async function showClientDetail(id) {
+					state.selectedClientId = id;
+					clientDetail.textContent = "Loading...";
+					try {
+						let detail = state.clientDetails.get(id);
+						if (!detail) {
+							detail = await apiFetch(`/api/v1/client/${id}`);
+							state.clientDetails.set(id, detail);
+						}
+
+						await ensureRoomDetails();
+						const joinedRooms = [];
+						const watchingRooms = [];
+						state.roomDetails.forEach((room) => {
+							if (!room || room.error) {
+								return;
+							}
+							const playing = room.playing_clients || {};
+							const watching = room.watching_clients || {};
+							if (Object.prototype.hasOwnProperty.call(playing, id)) {
+								joinedRooms.push(room.id || "");
+							}
+							if (Object.prototype.hasOwnProperty.call(watching, id)) {
+								watchingRooms.push(room.id || "");
+							}
+						});
+
+						clientDetail.innerHTML = `
+							<div class="kv">
+								<div class="label">ID</div>
+								<div>${detail.id || id}</div>
+								<div class="label">Name</div>
+								<div>${detail.name || ""}</div>
+								<div class="label">Description</div>
+								<div>${detail.description || ""}</div>
+							</div>
+							<div class="grid-two" style="margin-top: 12px;">
+								<div>
+									<strong>Joined rooms</strong>
+									<pre>${formatJson(joinedRooms)}</pre>
+								</div>
+								<div>
+									<strong>Watching rooms</strong>
+									<pre>${formatJson(watchingRooms)}</pre>
+								</div>
+							</div>
+							<div class="actions">
+								<button class="danger" type="button" data-client-delete="${id}">Delete client</button>
+							</div>
+							<h3>Full details</h3>
+							<pre>${formatJson(detail)}</pre>
+						`;
+						bindClientActions();
+					} catch (error) {
+						clientDetail.textContent = "Error: " + error.message;
+					}
+				}
+
+				function bindRoomActions() {
+					const deleteButton = roomDetail.querySelector("[data-room-delete]");
+					if (!deleteButton) {
+						return;
+					}
+					deleteButton.addEventListener("click", async () => {
+						const roomId = deleteButton.getAttribute("data-room-delete");
+						if (!roomId) {
+							return;
+						}
+						if (!confirm(`Confirm deletion of room ${roomId}?`)) {
+							return;
+						}
+						try {
+							deleteButton.disabled = true;
+							await apiFetch(`/api/v1/room/${roomId}`, { method: "DELETE" });
+							setStatus("Room deleted.");
+							await loadRooms();
+							roomDetail.textContent = "Select a room.";
+							state.selectedRoomId = null;
+						} catch (error) {
+							setStatus("Error: " + error.message, "error");
+						} finally {
+							deleteButton.disabled = false;
+						}
+					});
+				}
+
+				function bindClientActions() {
+					const deleteButton = clientDetail.querySelector("[data-client-delete]");
+					if (!deleteButton) {
+						return;
+					}
+					deleteButton.addEventListener("click", async () => {
+						const clientId = deleteButton.getAttribute("data-client-delete");
+						if (!clientId) {
+							return;
+						}
+						if (!confirm(`Confirm deletion of client ${clientId}?`)) {
+							return;
+						}
+						try {
+							deleteButton.disabled = true;
+							await apiFetch(`/api/v1/client/${clientId}`, { method: "DELETE" });
+							setStatus("Client deleted.");
+							await loadClients();
+							clientDetail.textContent = "Select a client.";
+							state.selectedClientId = null;
+						} catch (error) {
+							setStatus("Error: " + error.message, "error");
+						} finally {
+							deleteButton.disabled = false;
+						}
+					});
+				}
+
+				function bindTabs() {
+					const tabs = document.querySelectorAll(".tab");
+					tabs.forEach((tab) => {
+						tab.addEventListener("click", () => {
+							const section = tab.getAttribute("data-section");
+							tabs.forEach((t) => t.classList.remove("active"));
+							tab.classList.add("active");
+							document.querySelectorAll(".section").forEach((el) => {
+								el.classList.remove("active");
+							});
+							const active = document.getElementById(`section-${section}`);
+							if (active) {
+								active.classList.add("active");
+							}
+						});
+					});
+				}
+
+				function handleSystemMessage(message) {
+					if (message === "updated clients") {
+						loadClients().then(() => {
+							if (state.selectedClientId) {
+								showClientDetail(state.selectedClientId);
+							}
+						});
+					}
+					if (message === "updated rooms") {
+						loadRooms().then(() => {
+							if (state.selectedRoomId) {
+								showRoomDetail(state.selectedRoomId);
+							}
+							if (state.selectedClientId) {
+								showClientDetail(state.selectedClientId);
+							}
+						});
+					}
+				}
+
+				function connectSystemSocket() {
+					const jwt = getJwt();
+					if (!jwt) {
+						syncJwtCookie("");
+						setWsStatus("System WS disconnected", "warn");
+						return;
+					}
+
+					syncJwtCookie(jwt);
+
+					if (systemSocket) {
+						systemSocket.close();
+						systemSocket = null;
+					}
+
+					const protocol = location.protocol === "https:" ? "wss" : "ws";
+					const wsUrl = `${protocol}://${location.host}/api/v1/system/ws`;
+					systemSocket = new WebSocket(wsUrl);
+					setWsStatus("System WS connecting...", "warn");
+
+					systemSocket.addEventListener("open", () => {
+						setWsStatus("System WS connected", "ok");
+					});
+
+					systemSocket.addEventListener("message", (event) => {
+						const message = String(event.data || "").trim();
+						handleSystemMessage(message);
+					});
+
+					systemSocket.addEventListener("close", () => {
+						setWsStatus("System WS disconnected", "danger");
+					});
+
+					systemSocket.addEventListener("error", () => {
+						setWsStatus("System WS error", "danger");
+					});
+				}
+
+				function init() {
+					jwtInput.value = getJwt();
+					saveJwtButton.addEventListener("click", () => {
+						setJwt(jwtInput.value.trim());
+						setStatus("JWT saved.");
+						connectSystemSocket();
+					});
+					refreshAllButton.addEventListener("click", loadAll);
+					refreshGamesButton.addEventListener("click", loadGames);
+					refreshRoomsButton.addEventListener("click", loadRooms);
+					refreshClientsButton.addEventListener("click", loadClients);
+					bindTabs();
+					loadAll();
+					connectSystemSocket();
+				}
+
+				init();
+			})();
+		</script>
+	</body>
+</html>

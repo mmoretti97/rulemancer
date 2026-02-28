@@ -12,6 +12,7 @@ import (
 type ProtocolData struct {
 	*Engine
 	GameName            string              // Name of the game
+	GameNames           []string            // List of all game names
 	CurrentAssert       string              // The name of the current assert (used in assertions)
 	CurrentAssertParams []string            // The union of the sets of assertions parameters (used in assertions)
 	CurrentQuery        string              // The name of the current query (used in queries)
@@ -149,41 +150,13 @@ func (e *Engine) BuildEngineExtras(shellOutdir string) error {
 	// Define the templates directory
 	templateDir := "pkg/rulemancer/templates"
 
-	templateMap := make(map[string]string)
-
-	// Load the shell templates
-	if _, err := os.Stat(templateDir + "/shell"); os.IsNotExist(err) {
+	templateMap, err := e.shellTemplates(templateDir)
+	if err != nil {
 		if e.Debug {
 			l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/BuildEngineExtras]")+" ", 0)
-			l.Printf("Shell template directory does not exist: %s", templateDir+"/shell")
+			l.Printf("Error loading shell templates: %v", err)
 		}
-		return fmt.Errorf("template location does not exist: %s", templateDir+"/shell")
-	}
-	if templateFiles, err := os.ReadDir(templateDir + "/shell"); err != nil {
-		if e.Debug {
-			l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/BuildEngineExtras]")+" ", 0)
-			l.Printf("Error reading shell template directory: %v", err)
-		}
-		return fmt.Errorf("failed to read rules location: %w", err)
-	} else {
-		// Process each template file
-		for _, file := range templateFiles {
-			if !file.IsDir() {
-				if e.Debug {
-					l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, yellow("[rulemancer/BuildEngineExtras]")+" ", 0)
-					l.Printf("Processing shell template file: %s", file.Name())
-				}
-				content, err := os.ReadFile(templateDir + "/shell/" + file.Name())
-				if err != nil {
-					if e.Debug {
-						l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/BuildEngineExtras]")+" ", 0)
-						l.Printf("Error reading template file %s: %v", file.Name(), err)
-					}
-					return fmt.Errorf("failed to read template file %s: %w", file.Name(), err)
-				}
-				templateMap[file.Name()] = string(content)
-			}
-		}
+		return fmt.Errorf("failed to load shell templates: %w", err)
 	}
 
 	// Create the output directory if it doesn't exist
@@ -202,74 +175,13 @@ func (e *Engine) BuildEngineExtras(shellOutdir string) error {
 	}
 
 	// Load each game relations information about slots and multislots
-	gamesInterfaces := make(map[string]*ProtocolData)
-
-	for _, game := range e.games {
-
-		// Create a new ProtocolData for the game, it will hold the slots and multislots information from
-		// the rules files. It also has the funcMap for template execution.
-		rf := e.newProtocolData(true)
-
-		gameName := game.name
-		rulesLocation := game.rulesLocation
+	gamesInterfaces, err := e.gameInterfaces()
+	if err != nil {
 		if e.Debug {
-			l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, yellow("[rulemancer/BuildEngineExtras]")+" ", 0)
-			l.Printf("Building engine extras for game: %s from rules location: %s", gameName, rulesLocation)
+			l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/BuildEngineExtras]")+" ", 0)
+			l.Printf("Error loading game interfaces: %v", err)
 		}
-		// Load a game from the specified rules location
-		if _, err := os.Stat(rulesLocation); os.IsNotExist(err) {
-			return fmt.Errorf("rules location does not exist: %s", rulesLocation)
-		}
-		if rulesFiles, err := os.ReadDir(rulesLocation); err != nil {
-			return fmt.Errorf("failed to read rules location: %w", err)
-		} else {
-			// Load each rule file into CLIPS
-			for _, file := range rulesFiles {
-				// load the file
-				if !file.IsDir() {
-					if e.Debug {
-						l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, yellow("[rulemancer/BuildEngineExtras]")+" ", 0)
-						l.Printf("Processing rule file: %s", file.Name())
-					}
-					fileContent, err := os.ReadFile(rulesLocation + "/" + file.Name())
-					if err != nil {
-						if e.Debug {
-							l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/BuildEngineExtras]")+" ", 0)
-							l.Printf("Error reading rule file %s: %v", file.Name(), err)
-						}
-						return fmt.Errorf("failed to read rule file %s: %w", file.Name(), err)
-					}
-
-					if e.Debug {
-						l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, yellow("[rulemancer/BuildEngineExtras]")+" ", 0)
-						l.Printf("Executing parser on rule file: %s", file.Name())
-					}
-
-					pd := e.newProtocolData(false)
-
-					if err := pd.Compile(string(fileContent) + "\x00"); err != nil {
-						if e.Debug {
-							l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/BuildEngineExtras]")+" ", 0)
-							l.Printf("Error compiling rule file %s: %v", file.Name(), err)
-						}
-						return fmt.Errorf("failed to compile rule file %s: %w", file.Name(), err)
-					}
-					rf.Merge(pd)
-
-					if e.Debug {
-						l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, yellow("[rulemancer/BuildEngineExtras]")+" ", 0)
-						l.Printf("Successfully processed rule file: %s", file.Name())
-					}
-				}
-			}
-		}
-
-		rf.Assertables = game.assertable
-		rf.Responses = game.responses
-		rf.Queryables = game.queryable
-		rf.GameName = gameName
-
-		gamesInterfaces[gameName] = rf
+		return fmt.Errorf("failed to load game interfaces: %w", err)
 	}
 
 	// Now, we have all the games interfaces loaded with their slots and multislots. We also have the templates loaded.
@@ -382,4 +294,86 @@ func (e *Engine) commitTemplate(tmpl *template.Template, templateContent string,
 		l.Printf("Generated shell file: %s", outputFilePath)
 	}
 	return nil
+}
+
+func (e *Engine) gameInterfaces() (map[string]*ProtocolData, error) {
+
+	gameNames := make([]string, len(e.games))
+	i := 0
+	for _, game := range e.games {
+		gameNames[i] = game.name
+		i++
+	}
+
+	gamesInterfaces := make(map[string]*ProtocolData)
+	for _, game := range e.games {
+
+		// Create a new ProtocolData for the game, it will hold the slots and multislots information from
+		// the rules files. It also has the funcMap for template execution.
+		rf := e.newProtocolData(true)
+
+		gameName := game.name
+		rf.GameNames = gameNames
+		rulesLocation := game.rulesLocation
+		if e.Debug {
+			l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, yellow("[rulemancer/BuildEngineExtras]")+" ", 0)
+			l.Printf("Building engine extras for game: %s from rules location: %s", gameName, rulesLocation)
+		}
+		// Load a game from the specified rules location
+		if _, err := os.Stat(rulesLocation); os.IsNotExist(err) {
+			return nil, fmt.Errorf("rules location does not exist: %s", rulesLocation)
+		}
+		if rulesFiles, err := os.ReadDir(rulesLocation); err != nil {
+			return nil, fmt.Errorf("failed to read rules location: %w", err)
+		} else {
+			// Load each rule file into CLIPS
+			for _, file := range rulesFiles {
+				// load the file
+				if !file.IsDir() {
+					if e.Debug {
+						l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, yellow("[rulemancer/BuildEngineExtras]")+" ", 0)
+						l.Printf("Processing rule file: %s", file.Name())
+					}
+					fileContent, err := os.ReadFile(rulesLocation + "/" + file.Name())
+					if err != nil {
+						if e.Debug {
+							l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/BuildEngineExtras]")+" ", 0)
+							l.Printf("Error reading rule file %s: %v", file.Name(), err)
+						}
+						return nil, fmt.Errorf("failed to read rule file %s: %w", file.Name(), err)
+					}
+
+					if e.Debug {
+						l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, yellow("[rulemancer/BuildEngineExtras]")+" ", 0)
+						l.Printf("Executing parser on rule file: %s", file.Name())
+					}
+
+					pd := e.newProtocolData(false)
+
+					if err := pd.Compile(string(fileContent) + "\x00"); err != nil {
+						if e.Debug {
+							l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/BuildEngineExtras]")+" ", 0)
+							l.Printf("Error compiling rule file %s: %v", file.Name(), err)
+						}
+						return nil, fmt.Errorf("failed to compile rule file %s: %w", file.Name(), err)
+					}
+					rf.Merge(pd)
+
+					if e.Debug {
+						l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, yellow("[rulemancer/BuildEngineExtras]")+" ", 0)
+						l.Printf("Successfully processed rule file: %s", file.Name())
+					}
+				}
+			}
+		}
+
+		rf.Assertables = game.assertable
+		rf.Responses = game.responses
+		rf.Queryables = game.queryable
+		rf.GameName = gameName
+
+		gamesInterfaces[gameName] = rf
+	}
+
+	return gamesInterfaces, nil
 }

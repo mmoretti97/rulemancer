@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Rulemancer - {{ .GameName }}</title>
+		<style>
+			:root {
+				color-scheme: light;
+				--bg: #f6f8fa;
+				--panel: #ffffff;
+				--text: #1f2328;
+				--muted: #57606a;
+				--border: #d0d7de;
+				--primary: #2f3b52;
+				--primary-weak: #e6ebf2;
+				--danger: #b42318;
+			}
+
+			* {
+				box-sizing: border-box;
+			}
+
+			body {
+				font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+				margin: 0;
+				background: var(--bg);
+				color: var(--text);
+			}
+
+			header {
+				padding: 20px 24px;
+				background: var(--panel);
+				border-bottom: 1px solid var(--border);
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 16px;
+				flex-wrap: wrap;
+			}
+
+			h1 {
+				font-size: 20px;
+				margin: 0;
+			}
+
+			p {
+				margin: 6px 0 0 0;
+				color: var(--muted);
+			}
+
+			main {
+				padding: 24px;
+			}
+
+			.toolbar {
+				display: flex;
+				gap: 8px;
+				align-items: center;
+				flex-wrap: wrap;
+			}
+
+			input[type="text"] {
+				padding: 10px 12px;
+				border: 1px solid var(--border);
+				border-radius: 6px;
+				min-width: 220px;
+			}
+
+			button {
+				padding: 10px 16px;
+				border: 1px solid var(--primary);
+				background: var(--primary);
+				color: #ffffff;
+				border-radius: 6px;
+				cursor: pointer;
+				font-weight: 600;
+			}
+
+			button.secondary {
+				background: #ffffff;
+				color: var(--primary);
+			}
+
+			button:disabled {
+				opacity: 0.6;
+				cursor: not-allowed;
+			}
+
+			.grid-two {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 20px;
+			}
+
+			.panel {
+				background: var(--panel);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				padding: 16px;
+			}
+
+			.panel h2 {
+				margin: 0 0 12px 0;
+				font-size: 16px;
+			}
+
+			.stack {
+				display: flex;
+				flex-direction: column;
+				gap: 12px;
+			}
+
+			.card {
+				border: 1px solid var(--border);
+				border-radius: 10px;
+				padding: 12px;
+				background: #ffffff;
+			}
+
+			.card h3 {
+				margin: 0 0 10px 0;
+				font-size: 15px;
+			}
+
+			.relation {
+				margin: 0 0 10px 0;
+				padding: 10px;
+				border-radius: 8px;
+				background: var(--primary-weak);
+			}
+
+			.relation strong {
+				display: block;
+				margin-bottom: 8px;
+				font-size: 13px;
+			}
+
+			.field {
+				display: grid;
+				grid-template-columns: 140px 1fr;
+				gap: 8px;
+				align-items: center;
+				margin-bottom: 8px;
+			}
+
+			.field label {
+				font-size: 13px;
+				color: var(--muted);
+				font-weight: 600;
+			}
+
+			.field input {
+				width: 100%;
+				padding: 8px 10px;
+				border: 1px solid var(--border);
+				border-radius: 6px;
+			}
+
+			.response {
+				margin: 10px 0 0 0;
+				background: #0b0f14;
+				color: #e6edf3;
+				padding: 12px;
+				border-radius: 8px;
+				overflow: auto;
+				font-size: 12px;
+				min-height: 84px;
+			}
+
+			.muted {
+				color: var(--muted);
+				font-size: 14px;
+			}
+
+			.error {
+				color: var(--danger);
+			}
+
+			.badge {
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				padding: 4px 10px;
+				border-radius: 999px;
+				background: var(--primary-weak);
+				color: var(--primary);
+				font-size: 12px;
+				font-weight: 600;
+			}
+
+			.badge.ok {
+				background: #e7f8f4;
+				color: #067d68;
+			}
+
+			.badge.warn {
+				background: #fff5e6;
+				color: #f59e0b;
+			}
+
+			.badge.danger {
+				background: #feeceb;
+				color: var(--danger);
+			}
+
+			@media (max-width: 980px) {
+				.grid-two {
+					grid-template-columns: 1fr;
+				}
+
+				.field {
+					grid-template-columns: 1fr;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<div>
+				<h1>Game interaction: {{ .GameName }}</h1>
+				<p>Run assertions and queries for this game in a selected room.</p>
+			</div>
+			<div class="toolbar">
+				<span id="ws-status" class="badge warn">Room WS disconnected</span>
+				<button id="create-client" class="secondary" type="button">New Client</button>
+				<button id="join-room" class="secondary" type="button">Join Room</button>
+				<button id="create-room" class="secondary" type="button">New Room</button>
+				<input id="room-id" type="text" placeholder="Room ID" />
+				<input id="jwt" type="text" placeholder="Client JWT" />
+				<button id="save-jwt" class="secondary" type="button">Save JWT</button>
+			</div>
+		</header>
+
+		<main>
+			<div class="grid-two">
+				<section class="panel">
+					<h2>Assertions</h2>
+					<div class="stack">
+						{{- if .Assertables }}
+						{{- range $assertName, $relations := .Assertables }}
+						<article class="card assert-card" data-assert-name="{{ $assertName }}">
+							<h3>{{ $assertName }}</h3>
+							{{- range $rel := $relations }}
+							<div class="relation" data-relation="{{ $rel }}">
+								<strong>{{ $rel }}</strong>
+								{{- range $slot := index $.Slots $rel }}
+								<div class="field">
+									<label>{{ $slot }}</label>
+									<input
+										type="text"
+										data-kind="slot"
+										data-field-name="{{ $slot }}"
+										placeholder="{{ $slot }}"
+									/>
+								</div>
+								{{- end }}
+								{{- range $ms := index $.Multislots $rel }}
+								<div class="field">
+									<label>{{ $ms }} (comma separated)</label>
+									<input
+										type="text"
+										data-kind="multislot"
+										data-field-name="{{ $ms }}"
+										placeholder="value1, value2"
+									/>
+								</div>
+								{{- end }}
+							</div>
+							{{- end }}
+							<button class="run-assert" type="button">Run assertion</button>
+							<pre class="response">No response yet.</pre>
+						</article>
+						{{- end }}
+						{{- else }}
+						<div class="muted">No assertions available for this game.</div>
+						{{- end }}
+					</div>
+				</section>
+
+				<section class="panel">
+					<h2>Queries</h2>
+					<div class="stack">
+						{{- if .Queryables }}
+						{{- range $queryName, $_ := .Queryables }}
+						<article class="card query-card" data-query-name="{{ $queryName }}">
+							<h3>{{ $queryName }}</h3>
+							<button class="run-query" type="button">Run query</button>
+							<pre class="response">No response yet.</pre>
+						</article>
+						{{- end }}
+						{{- else }}
+						<div class="muted">No queries available for this game.</div>
+						{{- end }}
+					</div>
+				</section>
+			</div>
+		</main>
+
+		<script>
+			(function () {
+				const roomIdInput = document.getElementById('room-id');
+				const jwtInput = document.getElementById('jwt');
+				const saveJwtButton = document.getElementById('save-jwt');
+				const wsStatus = document.getElementById('ws-status');
+				const createClientButton = document.getElementById('create-client');			const joinRoomButton = document.getElementById('join-room');				const createRoomButton = document.getElementById('create-room');
+
+				const JWT_STORAGE_KEY = 'rulemancer-client-jwt';
+				const ROOM_ID_STORAGE_KEY = 'rulemancer-room-id';
+
+				let roomSocket = null;
+
+				jwtInput.value = localStorage.getItem(JWT_STORAGE_KEY) || '';
+				roomIdInput.value = localStorage.getItem(ROOM_ID_STORAGE_KEY) || '';
+
+				saveJwtButton.addEventListener('click', function () {
+					const jwt = jwtInput.value.trim();
+					const roomId = roomIdInput.value.trim();
+					localStorage.setItem(JWT_STORAGE_KEY, jwt);
+					localStorage.setItem(ROOM_ID_STORAGE_KEY, roomId);
+					connectRoomSocket();
+				});
+
+				function setWsStatus(text, variant) {
+					wsStatus.textContent = text;
+					wsStatus.classList.remove('ok', 'warn', 'danger');
+					if (variant) {
+						wsStatus.classList.add(variant);
+					}
+				}
+
+				function syncJwtCookie(jwt) {
+					if (!jwt) {
+						document.cookie = 'jwt=; Path=/; Max-Age=0; SameSite=Strict';
+						return;
+					}
+					const secureFlag = location.protocol === 'https:' ? '; Secure' : '';
+					document.cookie = 'jwt=' + encodeURIComponent(jwt) + '; Path=/; SameSite=Strict' + secureFlag;
+				}
+
+				function connectRoomSocket() {
+					const jwt = jwtInput.value.trim();
+					const roomId = roomIdInput.value.trim();
+
+					if (roomSocket) {
+						roomSocket.close();
+						roomSocket = null;
+					}
+
+					if (!roomId || !jwt) {
+						syncJwtCookie('');
+						setWsStatus('Room WS disconnected', 'warn');
+						return;
+					}
+
+					syncJwtCookie(jwt);
+
+					const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+					const wsUrl = protocol + '://' + location.host + '/api/v1/room/' + encodeURIComponent(roomId) + '/ws';
+					roomSocket = new WebSocket(wsUrl);
+					setWsStatus('Room WS connecting...', 'warn');
+
+					roomSocket.addEventListener('open', function () {
+						setWsStatus('Room WS connected', 'ok');
+					});
+
+					roomSocket.addEventListener('message', function (event) {
+						const message = String(event.data || '').trim();
+						console.log('Room message:', message);
+					});
+
+					roomSocket.addEventListener('close', function () {
+						setWsStatus('Room WS disconnected', 'danger');
+					});
+
+					roomSocket.addEventListener('error', function () {
+						setWsStatus('Room WS error', 'danger');
+					});
+				}
+
+				createClientButton.addEventListener('click', async function () {
+					const name = prompt('Client name:');
+					if (!name) return;
+
+					const description = prompt('Client description (optional):') || '';
+
+					createClientButton.disabled = true;
+					setWsStatus('Creating client...', 'warn');
+
+					try {
+						const res = await fetch('/api/v1/new/client', {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json'
+							},
+							body: JSON.stringify({ name: name, description: description })
+						});
+
+						const data = await res.json();
+
+						if (!res.ok) {
+							alert('Failed to create client: ' + (data.error || res.statusText));
+							setWsStatus('Room WS disconnected', 'warn');
+							return;
+						}
+
+						jwtInput.value = data.api_token;
+						localStorage.setItem(JWT_STORAGE_KEY, data.api_token);
+						alert('Client created: ' + data.id + '\nJWT token updated.');
+						connectRoomSocket();
+					} catch (err) {
+						alert('Network error: ' + err.message);
+						setWsStatus('Room WS disconnected', 'warn');
+					} finally {
+						createClientButton.disabled = false;
+					}
+				});
+
+				joinRoomButton.addEventListener('click', async function () {
+					const jwt = jwtInput.value.trim();
+					const roomId = roomIdInput.value.trim();
+
+					if (!jwt) {
+						alert('JWT token is required to join a room.');
+						return;
+					}
+
+					if (!roomId) {
+						alert('Room ID is required to join.');
+						return;
+					}
+
+					joinRoomButton.disabled = true;
+					setWsStatus('Joining room...', 'warn');
+
+					try {
+						const res = await fetch('/api/v1/join/room/' + encodeURIComponent(roomId), {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								'Authorization': 'Bearer ' + jwt
+							}
+						});
+
+						const data = await res.json();
+
+						if (!res.ok) {
+							alert('Failed to join room: ' + (data.error || res.statusText));
+							connectRoomSocket();
+							return;
+						}
+
+						alert('Joined room: ' + data.room_id + '\n' + data.message);
+						connectRoomSocket();
+					} catch (err) {
+						alert('Network error: ' + err.message);
+						setWsStatus('Room WS disconnected', 'warn');
+					} finally {
+						joinRoomButton.disabled = false;
+					}
+				});
+
+				createRoomButton.addEventListener('click', async function () {
+					const jwt = jwtInput.value.trim();
+					if (!jwt) {
+						alert('JWT token is required to create a room.');
+						return;
+					}
+
+					const roomName = prompt('Room name:');
+					if (!roomName) return;
+
+					const roomDescription = prompt('Room description (optional):') || '';
+					const gameRef = '{{ .GameName }}';
+
+					createRoomButton.disabled = true;
+					setWsStatus('Creating room...', 'warn');
+
+					try {
+						const res = await fetch('/api/v1/room/create', {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								'Authorization': 'Bearer ' + jwt
+							},
+							body: JSON.stringify({
+								name: roomName,
+								description: roomDescription,
+								game_ref: gameRef
+							})
+						});
+
+						const data = await res.json();
+
+						if (!res.ok) {
+							alert('Failed to create room: ' + (data.error || res.statusText));
+							connectRoomSocket();
+							return;
+						}
+
+						roomIdInput.value = data.id;
+						localStorage.setItem(ROOM_ID_STORAGE_KEY, data.id);
+						alert('Room created: ' + data.id + '\nRoom ID updated.');
+						connectRoomSocket();
+					} catch (err) {
+						alert('Network error: ' + err.message);
+						setWsStatus('Room WS disconnected', 'warn');
+					} finally {
+						createRoomButton.disabled = false;
+					}
+				});
+
+				function parseMultislot(value) {
+					return value
+						.split(',')
+						.map(function (part) {
+							return part.trim();
+						})
+						.filter(function (part) {
+							return part.length > 0;
+						});
+				}
+
+				function showResponse(target, payload) {
+					target.classList.remove('error');
+					target.textContent = JSON.stringify(payload, null, 2);
+				}
+
+				function showError(target, message, details) {
+					target.classList.add('error');
+					if (details) {
+						target.textContent = message + '\n' + JSON.stringify(details, null, 2);
+						return;
+					}
+					target.textContent = message;
+				}
+
+				function getHeaders() {
+					const jwt = jwtInput.value.trim();
+					const headers = {
+						'Content-Type': 'application/json'
+					};
+					if (jwt) {
+						headers.Authorization = 'Bearer ' + jwt;
+					}
+					return headers;
+				}
+
+				function requiredRoomId(target) {
+					const roomId = roomIdInput.value.trim();
+					if (!roomId) {
+						showError(target, 'Room ID is required.');
+						return null;
+					}
+					return roomId;
+				}
+
+				document.querySelectorAll('.run-assert').forEach(function (button) {
+					button.addEventListener('click', async function () {
+						const card = button.closest('.assert-card');
+						const response = card.querySelector('.response');
+						const roomId = requiredRoomId(response);
+						if (!roomId) {
+							return;
+						}
+
+						const assertName = card.dataset.assertName;
+						const payload = {};
+
+						card.querySelectorAll('.relation').forEach(function (relationBlock) {
+							const relationName = relationBlock.dataset.relation;
+							const relationPayload = {};
+
+							relationBlock.querySelectorAll('input[data-field-name]').forEach(function (input) {
+								const fieldName = input.dataset.fieldName;
+								const kind = input.dataset.kind;
+								const rawValue = input.value.trim();
+
+								if (kind === 'multislot') {
+									relationPayload[fieldName] = parseMultislot(rawValue);
+								} else {
+									relationPayload[fieldName] = [rawValue];
+								}
+							});
+
+							payload[relationName] = [relationPayload];
+						});
+
+						button.disabled = true;
+						response.classList.remove('error');
+						response.textContent = 'Loading...';
+
+						try {
+							const res = await fetch('/api/v1/room/' + encodeURIComponent(roomId) + '/assert/' + encodeURIComponent(assertName), {
+								method: 'POST',
+								headers: getHeaders(),
+								body: JSON.stringify(payload)
+							});
+
+							let data = null;
+							try {
+								data = await res.json();
+							} catch (_ignored) {}
+
+							if (!res.ok) {
+								showError(response, 'Request failed (' + res.status + ').', data);
+								return;
+							}
+
+							showResponse(response, data);
+						} catch (err) {
+							showError(response, 'Network error.', { message: err.message });
+						} finally {
+							button.disabled = false;
+						}
+					});
+				});
+
+				document.querySelectorAll('.run-query').forEach(function (button) {
+					button.addEventListener('click', async function () {
+						const card = button.closest('.query-card');
+						const response = card.querySelector('.response');
+						const roomId = requiredRoomId(response);
+						if (!roomId) {
+							return;
+						}
+
+						const queryName = card.dataset.queryName;
+
+						button.disabled = true;
+						response.classList.remove('error');
+						response.textContent = 'Loading...';
+
+						try {
+							const res = await fetch('/api/v1/room/' + encodeURIComponent(roomId) + '/query/' + encodeURIComponent(queryName), {
+								method: 'POST',
+								headers: getHeaders()
+							});
+
+							let data = null;
+							try {
+								data = await res.json();
+							} catch (_ignored) {}
+
+							if (!res.ok) {
+								showError(response, 'Request failed (' + res.status + ').', data);
+								return;
+							}
+
+							showResponse(response, data);
+						} catch (err) {
+							showError(response, 'Network error.', { message: err.message });
+						} finally {
+							button.disabled = false;
+						}
+					});
+				});
+
+				// Connect to room WebSocket on page load if JWT and Room ID are available
+				connectRoomSocket();
+			})();
+		</script>
+	</body>
+</html>

@@ -1,6 +1,8 @@
 {
 	"debug": true,
 	"debug_level": 10,
+	"engine_port": 3000,
+	"web_client_port": 8080,
 	"tls_cert_file": "server.crt",
 	"tls_key_file": "server.key",
 	"clipsless_mode": false,
