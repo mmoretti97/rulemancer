@@ -56,6 +56,24 @@
   (retract ?l)
   (assert (last-move (valid no) (reason "It's not your turn."))))
 
+(defrule invalid-move-out-of-bounds-x
+  ?l <- (last-move (valid ?a) (reason ?r))
+  ?s <- (state (phase playing))
+  ?m <- (move (x ?x&:(or (< ?x 1) (> ?x 3))) (y ?y) (player ?p))
+  =>
+  (retract ?m)
+  (retract ?l)
+  (assert (last-move (valid no) (reason "X coordinate out of bounds."))))
+
+(defrule invalid-move-out-of-bounds-y
+  ?l <- (last-move (valid ?a) (reason ?r))
+  ?s <- (state (phase playing))
+  ?m <- (move (x ?x) (y ?y&:(or (< ?y 1) (> ?y 3))) (player ?p))
+  =>
+  (retract ?m)
+  (retract ?l)
+  (assert (last-move (valid no) (reason "Y coordinate out of bounds."))))
+
 (defrule valid-move
   ?l <- (last-move (valid ?a) (reason ?r))
   ?s <- (state (phase playing))
@@ -113,3 +131,19 @@
   (retract ?s)
   (assert (state (phase ended)))
   (assert (winner (player ?p))))
+
+(defrule draw
+  ?c1 <- (cell (x 1) (y 1) (value ?v1))
+  ?c2 <- (cell (x 1) (y 2) (value ?v2))
+  ?c3 <- (cell (x 1) (y 3) (value ?v3))
+  ?c4 <- (cell (x 2) (y 1) (value ?v4))
+  ?c5 <- (cell (x 2) (y 2) (value ?v5))
+  ?c6 <- (cell (x 2) (y 3) (value ?v6))
+  ?c7 <- (cell (x 3) (y 1) (value ?v7))
+  ?c8 <- (cell (x 3) (y 2) (value ?v8))
+  ?c9 <- (cell (x 3) (y 3) (value ?v9))
+  ?s <- (state (phase playing))
+  =>
+  (retract ?s)
+  (assert (state (phase ended)))
+  (assert (winner (player draw))))
