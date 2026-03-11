@@ -5,7 +5,15 @@ source "$(dirname "$0")/common.sh"
 
 BRROOM_ID="${1:?usage: $0 <brroom_id>}"
 
-payload=$(
+payload=$(cat <<EOF
+{
+"facts": [{"first": {
+  "x" : ["a"],
+  "y" : ["v"]
+}}],
+"queries": ["first"]
+}
+
 EOF
 )
 

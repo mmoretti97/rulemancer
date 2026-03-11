@@ -106,30 +106,30 @@ func (e *Engine) apiDeleteBrRoom(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if e.Debug {
 			l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/apiDeleteBrRoom]")+" ", 0)
-			l.Printf("Unauthorized delete room attempt: %v", err)
+			l.Printf("Unauthorized delete bridge room attempt: %v", err)
 		}
 		Error(w, http.StatusUnauthorized, "unauthorized")
 		return
 	} else if clientID, ok := claims["id"].(string); !ok || clientID != "admin" {
 		if e.Debug {
 			l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/apiDeleteBrRoom]")+" ", 0)
-			l.Printf("Unauthorized delete room attempt with invalid token: %v", claims)
+			l.Printf("Unauthorized delete bridge room attempt with invalid token: %v", claims)
 		}
 		Error(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	if _, err := e.removeRoom(id); err != nil {
+	if _, err := e.removeBrRoom(id); err != nil {
 		if e.Debug {
 			l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/apiDeleteBrRoom]")+" ", 0)
-			l.Printf("Room not found: %v", err)
+			l.Printf("Bridge room not found: %v", err)
 		}
-		Error(w, http.StatusNotFound, "room not found")
+		Error(w, http.StatusNotFound, "bridge room not found")
 		return
 	} else {
 		if e.Debug {
 			l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, green("[rulemancer/apiDeleteBrRoom]")+" ", 0)
-			l.Printf("Room deleted: %v", id)
+			l.Printf("Bridge room deleted: %v", id)
 		}
 		JSON(w, http.StatusOK, map[string]string{
 			"status": "deleted",

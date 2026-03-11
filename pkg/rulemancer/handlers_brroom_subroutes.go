@@ -65,6 +65,9 @@ func (e *Engine) apiBridgeRequest(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		ci := brRoom.clipsInstance
+		ci.Lock()
+
 		// The request is composed of multiple facts asserted together, the "facts" field specifies a list of
 		// relations, each relation is a map of variable names to values, the values can be a single value or a
 		// list of values, for example:
@@ -123,9 +126,6 @@ func (e *Engine) apiBridgeRequest(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			ci := brRoom.clipsInstance
-			ci.Lock()
-
 			for _, fact := range facts {
 				if e.Debug {
 					l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, yellow("[rulemancer/apiBridgeRequest]")+" ", 0)
@@ -161,69 +161,72 @@ func (e *Engine) apiBridgeRequest(w http.ResponseWriter, r *http.Request) {
 					l.Printf("Successfully ran CLIPS in room %s", id)
 				}
 			}
-
-			// // Prepare the response
-			// response := make(map[string][]map[string]string)
-
-			// if relList, ok := room.game.responses[assertion]; !ok {
-			// 	if e.Debug {
-			// 		l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, yellow("[rulemancer/apiBridgeRequest]")+" ", 0)
-			// 		l.Printf("Assertion has no response relations in room %s: %s", id, assertion)
-			// 	}
-			// } else if len(relList) == 0 {
-			// 	if e.Debug {
-			// 		l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, yellow("[rulemancer/apiBridgeRequest]")+" ", 0)
-			// 		l.Printf("No relations for assertion in room %s: %s", id, assertion)
-			// 	}
-			// } else {
-
-			// 	// Aggregate all facts from all relations, the loop is split to limit the lock time
-			// 	allFacts := make([]string, len(relList))
-			// 	for i, rel := range relList {
-			// 		if e.Debug {
-			// 			l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, yellow("[rulemancer/apiBridgeRequest]")+" ", 0)
-			// 			l.Printf("Processing relation for assertion in room %s: %s", id, rel)
-			// 		}
-
-			// 		if factList, err := room.clipsInstance.QueryFactsAtomic(rel); err != nil {
-			// 			if e.Debug {
-			// 				l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/apiBridgeRequest]")+" ", 0)
-			// 				l.Printf("Error querying status in room %s - %s: %v", id, rel, err)
-			// 			}
-			// 			ci.Unlock()
-			// 			Error(w, http.StatusInternalServerError, "failed to query status")
-			// 			return
-			// 		} else {
-			// 			if e.Debug {
-			// 				l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, yellow("[rulemancer/apiBridgeRequest]")+" ", 0)
-			// 				l.Printf("Status in room %s - %s: %+v", id, rel, factList)
-			// 			}
-			// 			allFacts[i] = factList
-			// 		}
-			// 	}
-
-			// 	for i, factList := range allFacts {
-
-			// 		if factMap, err := genericFactToMap(e.Config, relList[i], factList); err != nil {
-			// 			if e.Debug {
-			// 				l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/apiBridgeRequest]")+" ", 0)
-			// 				l.Printf("Error converting fact to struct in room %s - %s: %v", id, relList[i], err)
-			// 			}
-			// 			ci.Unlock()
-			// 			Error(w, http.StatusInternalServerError, "failed to convert fact to struct")
-			// 			return
-			// 		} else {
-			// 			response[relList[i]] = factMap
-			// 		}
-			// 	}
-			// }
-
-			// ci.Unlock()
-
-			JSON(w, http.StatusOK, map[string]any{
-				"status": "asserted",
-				// "response": response,
-			})
 		}
+
+		// Prepare the response
+		response := make(map[string][]map[string]string)
+
+		if queries, ok := raw["queries"]; !ok {
+			if e.Debug {
+				l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, yellow("[rulemancer/apiBridgeRequest]")+" ", 0)
+				l.Printf("No queries field in request body for assertion in room %s", id)
+			}
+		} else {
+
+			var queryList []string
+			if err := json.Unmarshal(queries, &queryList); err != nil {
+				if e.Debug {
+					l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/apiBridgeRequest]")+" ", 0)
+					l.Printf("Error decoding queries list for assertion in room %s: %v", id, err)
+				}
+				Error(w, http.StatusBadRequest, "invalid queries format")
+				return
+			} else {
+				// The response is a list of relations to query after the run
+				allFacts := make([]string, len(queryList))
+
+				for i, rel := range queryList {
+
+					if factList, err := ci.QueryFactsAtomic(rel); err != nil {
+						if e.Debug {
+							l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/apiBridgeRequest]")+" ", 0)
+							l.Printf("Error querying status in room %s - %s: %v", id, rel, err)
+						}
+						ci.Unlock()
+						Error(w, http.StatusInternalServerError, "failed to query status")
+						return
+					} else {
+						if e.Debug {
+							l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, yellow("[rulemancer/apiBridgeRequest]")+" ", 0)
+							l.Printf("Status in room %s - %s: %+v", id, rel, factList)
+						}
+						allFacts[i] = factList
+					}
+				}
+
+				for i, factList := range allFacts {
+
+					if factMap, err := genericFactToMap(e.Config, queryList[i], factList); err != nil {
+						if e.Debug {
+							l := log.New(&writer{os.Stdout, "2006-01-02 15:04:05 "}, red("[rulemancer/apiBridgeRequest]")+" ", 0)
+							l.Printf("Error converting fact to struct in room %s - %s: %v", id, queryList[i], err)
+						}
+						ci.Unlock()
+						Error(w, http.StatusInternalServerError, "failed to convert fact to struct")
+						return
+					} else {
+						response[queryList[i]] = factMap
+					}
+				}
+			}
+		}
+
+		ci.Unlock()
+
+		JSON(w, http.StatusOK, map[string]any{
+			"asserted": facts,
+			"response": response,
+		})
+
 	}
 }
