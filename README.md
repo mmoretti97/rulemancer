@@ -4,13 +4,14 @@
   <img src="logo.png" alt="Rulemancer Logo"/>
 </p>
 
-A Go application that embeds the CLIPS expert system engine to power rules-based games. Define game logic using CLIPS (an expressive rule/fact inference engine), then interact with it via HTTP or CLI.
+A Go application that embeds the CLIPS expert system engine to power rules-based games and direct JSON-to-CLIPS bridges. Define logic using CLIPS (an expressive rule/fact inference engine), then interact with it via HTTP or CLI.
 
 ## Features
 
 - **CLIPS Integration**: Leverage CLIPS for complex rule-based inference and fact management
 - **Multi-Game Support**: Host multiple game types simultaneously with dynamic game loading
 - **Room-Based Multiplayer**: Create isolated game rooms for concurrent sessions
+- **Direct Bridge Mode**: Create bridge rooms that accept raw JSON facts and query arbitrary CLIPS relations
 - **HTTP API**: Comprehensive REST endpoints for system, game, and room management with TLS support
 - **Real-Time WebSocket Support**: Subscribe to room events and receive live notifications when actions occur
 - **Flexible Configuration**: JSON-based configuration with support for multiple game definitions
@@ -41,7 +42,9 @@ Inside the project directory, you'll find the following key folders:
 - **`core/`** - CLIPS 6.4 C source files and headers (not included in the repo, install using `install-clips.sh`)
 - **`cmd/`** - CLI commands (serve, test, build, root)
 - **`pkg/rulemancer/`** - Core engine, CLIPS bindings, HTTP handlers, and game management
-- **`rulepool/`** - CLIPS rule files (`.clp`) for game definitions (e.g., Tic-Tac-Toe example)
+- **`rulepool/`** - CLIPS rule directories loaded by config
+- **`rulepool/tictactoe/`, `rulepool/magic/`** - Game mode rules (multiplayer rooms)
+- **`rulepool/bridge/`** - Bridge mode rules (direct JSON<->CLIPS)
 - **`interface/`** - Client interface examples and utilities (builded via `rulemancer build`)
 - **`testpool/`** - Test rule files for development (unit tests for Tic-Tac-Toe game logic)
 
@@ -56,8 +59,6 @@ make
 
 The above commands will compile CLIPS and build the Rulemancer binary placed in the project root: `./rulemancer`
 
-### 
-
 ### Basic Usage
 
 Before starting the server, set the JWT secret as an environment variable:
@@ -69,19 +70,24 @@ export RULEMANCER_JWT_SECRET="your-secret-key-here"
 Then use the following commands:
 
 - `./rulemancer test` - Run test suite
-- `./rulemancer build` - Build the extra tools (generates client shell scripts from templates)
+- `./rulemancer build` - Build extra tools (generates game and bridge shell scripts from templates)
 - `./rulemancer serve` - Start HTTPS server (listens on :3000 with TLS)
 
 Once the server is running, it will print an admin JWT token to stdout. The API can be accessed at `https://localhost:3000/api/v1/`
 
 #### Shell Script Templates
 
-The `rulemancer build` command generates shell client interfaces from templates located in `pkg/rulemancer/templates/gameshell/`. These scripts are created in the `interface/` folder for each available game, providing convenient command-line access to the API.
+The `rulemancer build` command generates shell client interfaces from:
+
+- `pkg/rulemancer/templates/gameshell/` for game rooms
+- `pkg/rulemancer/templates/bridgeshell/` for bridge rooms
+
+Scripts are created under `interface/<name>/` for each configured game and bridge, providing convenient command-line access to the API.
 
 #### Documentation
 
 - [API Endpoints](README-API.md) - Complete API reference for all endpoints
-- [Rooms and Games](README-ROOMS-AND-GAMES.md) - Guide for creating and managing game rooms
+- [Rooms and Games](README-ROOMS-AND-GAMES.md) - Guide for game mode rooms and bridge mode sessions
 - [Game Definition](README-GAME-DEFINITION.md) - How to define new games using CLIPS
 
 The `rulemancer.json` configuration file can be edited to customize server settings.
@@ -122,7 +128,8 @@ Edit `rulemancer.json`:
   "tls_cert_file": "server.crt",
   "tls_key_file": "server.key",
   "clipsless_mode": false,
-  "games": ["rulepool"]
+  "games": ["rulepool/tictactoe", "rulepool/magic"],
+  "bridges": {"bridge": "rulepool/bridge"}
 }
 ```
 
@@ -134,6 +141,11 @@ Edit `rulemancer.json`:
 - **tls_key_file**: Path to TLS private key file
 - **clipsless_mode**: Run without CLIPS for testing purposes
 - **games**: Array of game directories to load
+- **bridges**: Map of bridge name to CLIPS rules directory. Each entry creates a bridge definition loadable through `/api/v1/bridge/*` and spawnable as bridge rooms via `/api/v1/brroom/*`
+
+## Game Mode
+
+Game mode is the multiplayer flow based on `games` config and `/api/v1/room/*` endpoints (`join`, `watch`, websocket updates).
 
 ### Game Definition
 
@@ -153,11 +165,52 @@ Each game directory should contain CLIPS files with:
 - **Response facts**: Facts returned after assertions
 - **Game rules**: CLIPS rules implementing game logic
 
-for more details check the [Game Definition](README-GAME-DEFINITION.md) document.
+For more details check [README-GAME-DEFINITION.md](README-GAME-DEFINITION.md).
 
-## Example: Tic-Tac-Toe
+### Example: Tic-Tac-Toe
 
 See [rulepool/tictactoe.clp](rulepool/tictactoe.clp) and [rulepool/tictactoemeta.clp](rulepool/tictactoemeta.clp) for a complete game implementation using CLIPS rules and facts.
+
+## Bridge Mode (Direct JSON <-> CLIPS)
+
+Bridge mode is the direct integration flow based on `bridges` config and `/api/v1/brroom/*` endpoints.
+
+1. Configure one or more bridges in `rulemancer.json` under `bridges`.
+2. Create a bridge room with `POST /api/v1/brroom/create`.
+3. Send a combined request to `POST /api/v1/brroom/{id}/request` with:
+   - `facts`: list of relations to assert
+   - `queries`: list of relations to read back
+
+Example request body:
+
+```json
+{
+  "facts": [
+    {
+      "first": {
+        "x": ["a"],
+        "y": ["v"]
+      }
+    }
+  ],
+  "queries": ["first"]
+}
+```
+
+Response shape:
+
+```json
+{
+  "asserted": ["(first ...)"],
+  "response": {
+    "first": [
+      {"x": "a", "y": "v"}
+    ]
+  }
+}
+```
+
+Bridge routes are documented in detail in [README-API.md](README-API.md).
 
 ## License
 

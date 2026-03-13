@@ -1,111 +1,188 @@
 # Rulemancer API Endpoints
 
-The server exposes the following API routes under `/api/v1`. All endpoints require JWT authentication unless otherwise noted.
+The server exposes API routes under `/api/v1`.
 
 ## Authentication
 
-All authenticated endpoints require a JWT token in the `Authorization` header:
+All authenticated endpoints require:
 
-```
+```text
 Authorization: Bearer <jwt_token>
 ```
 
-- **Admin Token**: Printed to stdout at server startup. Used for system operations.
-- **Client Tokens**: Obtained by creating a client via `/api/v1/new/client`.
+- Admin token: printed to stdout at server startup.
+- Client token: returned by `POST /api/v1/new/client`.
 
-## New Entity Creation Routes
+## Unauthenticated Routes
 
-These endpoints do not require authentication:
-
-- `POST /api/v1/new/client` - Create a new client and receive a JWT token
-  - **Request Body**: `{"name": "string", "description": "string"}`
-  - **Response**: `{"id": "string", "api_token": "string"}`
+- `POST /api/v1/new/client` - Create a client and receive a JWT token
+  - Request body: `{"name": "string", "description": "string"}`
+  - Response: `{"id": "string", "api_token": "string"}`
 
 ## System Routes
 
-Requires admin authentication:
+Admin only:
 
-- `GET /api/v1/system/health` - Get system health status
-  - **Response**: `{"status": "OK"}`
-- `POST /api/v1/system/quit` - Gracefully shutdown the server
-  - **Request Body**: `{"graceful": true}`
-  - **Response**: `{"status": "shutting down"}`
-- `WS /api/v1/system/ws` - WebSocket connection for system-wide monitoring (admin only)
-  - **Protocol**: WebSocket (wss://)
-  - **Authentication**: JWT token required via Authorization header during handshake
-  - **Purpose**: Real-time system monitoring and notifications
+- `GET /api/v1/system/health` - Health check
+  - Response: `{"status": "OK"}`
+- `POST /api/v1/system/quit` - Graceful shutdown
+  - Request body: `{"graceful": true}`
+  - Response: `{"status": "shutting down"}`
+- `WS /api/v1/system/ws` - System monitoring websocket
 
 ## Client Routes
 
-- `POST /api/v1/client/create` - Create a new client (deprecated, use `/new/client` instead)
-- `GET /api/v1/client/list` - List all clients
-  - **Response**: `{"clients": ["id1", "id2", ...]}`
-- `GET /api/v1/client/current` - Get current client information (from JWT token)
-  - **Response**: `{"id": "string", "name": "string", "description": "string"}`
-- `GET /api/v1/client/{id}` - Get client details by ID
-  - **Response**: `{"id": "string", "name": "string", "description": "string"}`
-- `DELETE /api/v1/client/{id}` - Delete a client
-  - **Response**: `{"status": "deleted"}`
+- `POST /api/v1/client/create` - Create client (deprecated, use `/new/client`)
+- `GET /api/v1/client/list` - List clients
+  - Response: `{"clients": ["id1", "id2", ...]}`
+- `GET /api/v1/client/current` - Get current client from JWT
+  - Response: `{"id": "string", "name": "string", "description": "string"}`
+- `GET /api/v1/client/{id}` - Get client details
+  - Response: `{"id": "string", "name": "string", "description": "string"}`
+- `DELETE /api/v1/client/{id}` - Delete client
+  - Response: `{"status": "deleted"}`
 
-## Game Routes
+## Game Mode API
 
-- `GET /api/v1/game/list` - List all available games
-  - **Response**: `{"games": ["game1", "game2", ...]}`
-- `GET /api/v1/game/{id}` - Get game details including assertables, queryables, and responses
-  - **Response**: `{"id": "string", "name": "string", "description": "string", "rules": "string", "assertable": {...}, "responses": {...}, "queryable": {...}}`
+This mode uses the `games` configuration and room/join/watch flows.
 
-## Room Routes
+### Game Routes
 
-- `POST /api/v1/room/create` - Create a new game room
-  - **Request Body**: `{"name": "string", "description": "string", "game_ref": "string"}`
-  - **Response**: `{"id": "string"}`
-- `GET /api/v1/room/list` - List all active rooms
-  - **Response**: `{"rooms": ["room1", "room2", ...]}`
+- `GET /api/v1/game/list` - List available games
+  - Response: `{"games": ["game1", "game2", ...]}`
+- `GET /api/v1/game/{id}` - Get game details
+  - Response: `{"id": "string", "name": "string", "description": "string", "rules": "string", "assertable": {...}, "responses": {...}, "queryable": {...}}`
+
+### Room Routes
+
+- `POST /api/v1/room/create` - Create game room
+  - Request body: `{"name": "string", "description": "string", "game_ref": "string"}`
+  - Response: `{"id": "string"}`
+- `GET /api/v1/room/list` - List active rooms
+  - Response: `{"rooms": ["room1", "room2", ...]}`
 - `GET /api/v1/room/{id}` - Get room details
-  - **Response**: `{"id": "string", "name": "string", "description": "string", "clips_instance": {...}, "running_game": {...}}`
-- `DELETE /api/v1/room/{id}` - Delete a room
-  - **Response**: `{"status": "deleted"}`
+  - Response: `{"id": "string", "name": "string", "description": "string", "clips_instance": {...}, "running_game": {...}}`
+- `DELETE /api/v1/room/{id}` - Delete room
+  - Response: `{"status": "deleted"}`
 
 ### Room Sub-Routes
 
-- `POST /api/v1/room/{id}/assert/{assertion}` - Assert facts to a room
-  - **Request Body**: JSON object with relation names as keys and arrays of fact objects as values
-  - **Response**: `{"response": {...}}` - Returns the result facts as defined in the game's response configuration
-  - **Side Effect**: Broadcasts notification to all WebSocket connections on the room
-- `POST /api/v1/room/{id}/query/{query}` - Query facts from a room
-  - **Response**: `{"response": {...}}` - Returns the queried facts
-- `GET /api/v1/room/{id}/facts` - Get all facts from a room (debug mode only)
-  - **Response**: `{"facts": [...]}`
-- `WS /api/v1/room/{id}/ws` - WebSocket connection for real-time room updates
-  - **Protocol**: WebSocket (wss://)
-  - **Authentication**: JWT token required via Authorization header during handshake
-  - **Access**: Available to room clients (players) and watchers (spectators)
-  - **Notifications**: Receives messages when facts are asserted in the room
-  - **Message Format**: Text messages like `"asserted (move x 1 y 1 player x)"`
+- `POST /api/v1/room/{id}/assert/{assertion}` - Assert facts to room
+  - Request body: JSON object with relation names as keys
+  - Response: `{"status": "asserted", "response": {...}}`
+  - Side effect: broadcasts websocket notification to room clients/watchers
+- `POST /api/v1/room/{id}/query/{query}` - Query room facts
+  - Response: `{"response": {...}}`
+- `GET /api/v1/room/{id}/facts` - Get all room facts (debug mode only, admin only)
+  - Response: `{"facts": [...]}`
+- `WS /api/v1/room/{id}/ws` - Room websocket (players/watchers)
 
-## Join Routes
+### Join Routes
 
-These routes allow clients to join or create game rooms:
+- `POST /api/v1/join/available/{gameRef}` - Join first available room or create one
+  - Response: `{"room_id": "string", "message": "joined room" | "created and joined new room"}`
+- `POST /api/v1/join/room/{roomID}` - Join specific room
+  - Response: `{"room_id": "string", "message": "joined room"}`
+- `POST /api/v1/join/new/{gameRef}` - Create room and join
+  - Response: `{"room_id": "string", "message": "created and joined new room"}`
 
-- `POST /api/v1/join/available/{gameRef}` - Join the first available room for the specified game, or create a new one if none available
-  - **Response**: `{"room_id": "string", "message": "joined room" | "created and joined new room"}`
-- `POST /api/v1/join/room/{roomID}` - Join a specific room by ID
-  - **Response**: `{"room_id": "string", "message": "joined room"}`
-- `POST /api/v1/join/new/{gameRef}` - Create a new room for the specified game and join it
-  - **Response**: `{"room_id": "string", "message": "created and joined new room"}`
+### Watch Routes
 
-## Watch Routes
+- `POST /api/v1/watch/room/{roomId}` - Start watching room
+  - Response: `{"room_id": "string", "message": "watching room"}`
+- `POST /api/v1/watch/stop/{roomId}` - Stop watching room
+  - Response: `{"room_id": "string", "message": "stopped watching room"}`
 
-These routes allow clients to watch rooms as spectators (read-only access):
+## Bridge Mode API
 
-- `POST /api/v1/watch/room/{roomId}` - Start watching a specific room
-  - **Response**: `{"room_id": "string", "message": "watching room"}`
-- `POST /api/v1/watch/stop/{roomId}` - Stop watching a specific room
-  - **Response**: `{"room_id": "string", "message": "stopped watching room"}`
+This mode uses the `bridges` configuration and direct JSON-to-CLIPS requests.
+
+### Bridge Routes
+
+- `GET /api/v1/bridge/list` - List loaded bridge IDs
+  - Auth: any authenticated token
+  - Response: `{"bridges": ["bridgeId1", "bridgeId2", ...]}`
+- `GET /api/v1/bridge/{id}` - Get bridge details (by ID or bridge name)
+  - Auth: admin only
+  - Response: `{"id": "string", "name": "string", "rules": "string"}`
+
+### Bridge Room Routes
+
+- `POST /api/v1/brroom/create` - Create bridge room
+  - Auth: any authenticated token
+  - Request body: `{"name": "string", "bridge_ref": "bridge_id_or_name"}`
+  - Response: `{"id": "string"}`
+- `GET /api/v1/brroom/list` - List bridge rooms
+  - Auth: admin only
+  - Response: `{"brrooms": ["room1", "room2", ...]}`
+- `GET /api/v1/brroom/{id}` - Get bridge room details
+  - Auth: admin only
+  - Response: `{"id": "string", "clips_instance": {...}}`
+- `DELETE /api/v1/brroom/{id}` - Delete bridge room
+  - Auth: admin only
+  - Response: `{"status": "deleted"}`
+- `POST /api/v1/brroom/{id}/request` - Assert facts and query relations in one call
+  - Auth: any authenticated token
+  - Request body:
+    - `facts` (optional): array of relation assertions
+    - `queries` (optional): array of relation names to query
+  - Response: `{"asserted": ["(relation ...)", ...], "response": {"relation": [{...}]}}`
+- `GET /api/v1/brroom/{id}/facts` - Get all bridge room facts (debug mode only, admin only)
+  - Response: `{"facts": [...]}`
+
+### Bridge Request Payload Format
+
+`POST /api/v1/brroom/{id}/request` envelope:
+
+```json
+{
+  "facts": [
+    {
+      "first": {
+        "x": ["a"],
+        "y": ["v"]
+      }
+    }
+  ],
+  "queries": ["first"]
+}
+```
+
+`facts` supports both per-relation encodings:
+
+- Object encoding (single fact):
+
+```json
+{"first": {"x": ["a"], "y": ["v"]}}
+```
+
+- Array encoding (multiple grouped slots):
+
+```json
+{"first": [{"x": ["a"]}, {"y": ["v"]}]}
+```
+
+Example response:
+
+```json
+{
+  "asserted": ["(first ...)", "..."],
+  "response": {
+    "first": [
+      {"x": "a", "y": "v"}
+    ]
+  }
+}
+```
+
+Notes:
+
+- If `facts` is omitted, assertions are skipped.
+- If `queries` is omitted, `response` is empty.
 
 ## Error Responses
 
-All endpoints may return error responses in the following format:
+Standard error envelope:
 
 ```json
 {
@@ -113,11 +190,13 @@ All endpoints may return error responses in the following format:
 }
 ```
 
-Common HTTP status codes:
-- `200 OK` - Request successful
-- `201 Created` - Resource created successfully
-- `400 Bad Request` - Invalid request body or parameters
-- `401 Unauthorized` - Missing or invalid JWT token
-- `404 Not Found` - Requested resource not found
-- `409 Conflict` - Resource conflict (e.g., already joined room)
-- `500 Internal Server Error` - Server error
+Common statuses:
+
+- `200 OK`
+- `201 Created`
+- `400 Bad Request`
+- `401 Unauthorized`
+- `403 Forbidden`
+- `404 Not Found`
+- `409 Conflict`
+- `500 Internal Server Error`

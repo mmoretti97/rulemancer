@@ -11,6 +11,11 @@ Rulemancer uses a room-based architecture where:
 - **Clients** are authenticated users who can join rooms and interact with games
 - **Watchers** are clients who observe rooms in read-only mode
 
+This document is split into two independent parts:
+
+- **Game Mode**: rooms, join/watch workflows, assert/query endpoints
+- **Bridge Mode**: direct JSON<->CLIPS sessions via bridge rooms
+
 ## Core Concepts
 
 ### Games
@@ -262,6 +267,74 @@ curl -k -X DELETE https://localhost:3000/api/v1/room/{room_id} \
   -H "Authorization: Bearer $API_TOKEN"
 ```
 
+## Bridge Mode (Direct JSON <-> CLIPS)
+
+Use this mode when you need a direct bridge instead of player/join/watch room mechanics.
+
+Bridge mode is separate from game rooms. A bridge room has:
+
+- A unique ID
+- A reference to a loaded bridge (`bridges` in `rulemancer.json`)
+- A dedicated CLIPS instance
+- A generic request endpoint: `POST /api/v1/brroom/{id}/request`
+
+### Create a Bridge Room
+
+```bash
+curl -k -X POST https://localhost:3000/api/v1/brroom/create \
+  -H "Authorization: Bearer $API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "bridge-session-1",
+    "bridge_ref": "bridge"
+  }'
+```
+
+### Send a Bridge Request
+
+```bash
+curl -k -X POST https://localhost:3000/api/v1/brroom/bridge-session-1/request \
+  -H "Authorization: Bearer $API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "facts": [
+      {
+        "first": {
+          "x": ["a"],
+          "y": ["v"]
+        }
+      }
+    ],
+    "queries": ["first"]
+  }'
+```
+
+Example response:
+
+```json
+{
+  "asserted": ["(first ...)"],
+  "response": {
+    "first": [
+      {"x": "a", "y": "v"}
+    ]
+  }
+}
+```
+
+### Inspect and Delete Bridge Rooms
+
+Admin-only endpoints:
+
+- `GET /api/v1/brroom/list`
+- `GET /api/v1/brroom/{id}`
+- `DELETE /api/v1/brroom/{id}`
+
+Bridge discovery endpoints:
+
+- `GET /api/v1/bridge/list` (authenticated)
+- `GET /api/v1/bridge/{id_or_name}` (admin only)
+
 ## Complete Workflow Example
 
 Here's a complete example of two players playing Tic-Tac-Toe:
@@ -342,7 +415,7 @@ source client-create.sh
 ./join-new.sh tictactoe
 
 # Make a move (scripts are game-specific)
-./tictactoe_move.sh $ROOM_ID 1 1 x
+./assert_move.sh $ROOM_ID 1 1 x
 
 # Query state
 ./query.sh $ROOM_ID cell

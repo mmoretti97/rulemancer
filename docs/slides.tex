@@ -273,8 +273,54 @@ for different functionalities:
   \vspace{0.3cm}
   \item \texttt{/room} $\rightarrow$ create/list/get/delete + assert/query/ws.
   \vspace{0.3cm}
+  \item \texttt{/bridge} and \texttt{/brroom} $\rightarrow$ direct JSON-to-CLIPS bridge workflows.
+  \vspace{0.3cm}
   \item \texttt{/join} and \texttt{/watch} $\rightarrow$ room participation workflows.
 \end{itemize}
+\end{frame}
+
+\begin{frame}{Bridge Mode: Direct JSON $\leftrightarrow$ CLIPS}
+Bridge mode is designed for generic integrations where clients do not need game-specific
+\texttt{assertable/results/queryable} contracts.\\
+\vspace{0.3cm}
+Flow:
+\begin{itemize}
+  \item Configure bridges in \texttt{rulemancer.json}: \texttt{"bridges": \{"name": "rulepool/path"\}}.
+  \item Create a bridge room: \texttt{POST /api/v1/brroom/create}.
+  \item Send facts + queries in one call: \texttt{POST /api/v1/brroom/\{id\}/request}.
+  \item Receive asserted CLIPS facts plus queried relations in a structured JSON response.
+\end{itemize}
+\vspace{0.3cm}
+Useful endpoints:
+\begin{itemize}
+  \item \texttt{GET /api/v1/bridge/list}, \texttt{GET /api/v1/bridge/\{id\}}
+  \item \texttt{GET /api/v1/brroom/list}, \texttt{DELETE /api/v1/brroom/\{id\}}
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Bridge Request Example}
+\textbf{Request}
+\begin{verbatim}
+POST /api/v1/brroom/bridge-session-1/request
+{
+  "facts": [
+    {"first": {"x": ["a"], "y": ["v"]}}
+  ],
+  "queries": ["first"]
+}
+\end{verbatim}
+
+\textbf{Response shape}
+\begin{verbatim}
+{
+  "asserted": ["(first ... )"],
+  "response": {
+    "first": [
+      {"x": "a", "y": "v"}
+    ]
+  }
+}
+\end{verbatim}
 \end{frame}
 
 

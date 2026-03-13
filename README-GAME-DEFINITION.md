@@ -1,6 +1,6 @@
 # Rulemancer Game Setup Guide
 
-This guide explains how to set up CLIPS rule files to enable a game to work with Rulemancer.
+This guide explains how to set up CLIPS rule files to enable a game to work with Rulemancer. This only covers game mode rooms.
 
 ## Overview
 
@@ -59,6 +59,8 @@ The engine exposes these queryables as REST endpoints for retrieving game state 
 ```
 
 ## Step-by-Step Setup
+
+This workflow is specifically for games loaded via the `games` config key.
 
 ### Step 1: Create Your Game File
 
