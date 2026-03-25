@@ -86,9 +86,9 @@ Scripts are created under `interface/<name>/` for each configured game and bridg
 
 #### Documentation
 
-- [API Endpoints](README-API.md) - Complete API reference for all endpoints
-- [Rooms and Games](README-ROOMS-AND-GAMES.md) - Guide for game mode rooms and bridge mode sessions
-- [Game Definition](README-GAME-DEFINITION.md) - How to define new games using CLIPS
+- [API Endpoints](https://github.com/mmirko/rulemancer/blob/master/README-API.md) - Complete API reference for all endpoints
+- [Rooms and Games](https://github.com/mmirko/rulemancer/blob/master/README-ROOMS-AND-GAMES.md) - Guide for game mode rooms and bridge mode sessions
+- [Game Definition](https://github.com/mmirko/rulemancer/blob/master/README-GAME-DEFINITION.md) - How to define new games using CLIPS
 
 The `rulemancer.json` configuration file can be edited to customize server settings.
 
@@ -106,7 +106,7 @@ Rulemancer uses JWT-based authentication for API access:
 3. **Use Token**: Include the token in the `Authorization: Bearer <token>` header for all subsequent API calls
 4. **Manage Clients**: Admin can list, view, and delete clients through `/api/v1/client` endpoints
 
-Clients can join game rooms, watch games as spectators, and interact with game logic through the API. See the [Rooms and Games](README-ROOMS-AND-GAMES.md) guide for more details.
+Clients can join game rooms, watch games as spectators, and interact with game logic through the API. See the [Rooms and Games](https://github.com/mmirko/rulemancer/blob/master/README-ROOMS-AND-GAMES.md) guide for more details.
 
 ## Real-Time WebSocket Notifications
 
@@ -115,7 +115,7 @@ Rulemancer supports real-time WebSocket connections for monitoring room activiti
 - **System Monitor**: Admin-only WebSocket at `/api/v1/system/ws` for system-wide monitoring
 - **Room Monitor**: Room-specific WebSocket at `/api/v1/room/{id}/ws` for real-time game updates
 
-Clients connected to a room's WebSocket receive instant notifications when facts are asserted (e.g., when players make moves). This enables real-time game interfaces and live spectator views. See the [Rooms and Games](README-ROOMS-AND-GAMES.md) guide for WebSocket usage examples.
+Clients connected to a room's WebSocket receive instant notifications when facts are asserted (e.g., when players make moves). This enables real-time game interfaces and live spectator views. See the [Rooms and Games](https://github.com/mmirko/rulemancer/blob/master/README-ROOMS-AND-GAMES.md) guide for WebSocket usage examples.
 
 ## Configuration
 
@@ -165,11 +165,11 @@ Each game directory should contain CLIPS files with:
 - **Response facts**: Facts returned after assertions
 - **Game rules**: CLIPS rules implementing game logic
 
-For more details check [README-GAME-DEFINITION.md](README-GAME-DEFINITION.md).
+For more details check [README-GAME-DEFINITION.md](https://github.com/mmirko/rulemancer/blob/master/README-GAME-DEFINITION.md).
 
 ### Example: Tic-Tac-Toe
 
-See [rulepool/tictactoe.clp](rulepool/tictactoe.clp) and [rulepool/tictactoemeta.clp](rulepool/tictactoemeta.clp) for a complete game implementation using CLIPS rules and facts.
+See [rulepool/tictactoe.clp](https://github.com/mmirko/rulemancer/blob/master/rulepool/tictactoe.clp) and [rulepool/tictactoemeta.clp](https://github.com/mmirko/rulemancer/blob/master/rulepool/tictactoemeta.clp) for a complete game implementation using CLIPS rules and facts.
 
 ## Bridge Mode (Direct JSON <-> CLIPS)
 
@@ -210,7 +210,7 @@ Response shape:
 }
 ```
 
-Bridge routes are documented in detail in [README-API.md](README-API.md).
+Bridge routes are documented in detail in [README-API.md](https://github.com/mmirko/rulemancer/blob/master/README-API.md).
 
 ## License
 

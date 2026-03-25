@@ -478,6 +478,6 @@ This endpoint is only available when the server is running with `"debug": true` 
 
 ## See Also
 
-- [API Endpoints](README-API.md) - Complete API reference
-- [Game Definition](README-GAME-DEFINITION.md) - How to create new games
-- [Main README](README.md) - Installation and configuration
+- [API Endpoints](https://github.com/mmirko/rulemancer/blob/master/README-API.md) - Complete API reference
+- [Game Definition](https://github.com/mmirko/rulemancer/blob/master/README-GAME-DEFINITION.md) - How to create new games
+- [Main README](https://github.com/mmirko/rulemancer/blob/master/README.md) - Installation and configuration
