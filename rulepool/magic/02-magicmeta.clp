@@ -6,6 +6,12 @@
 
 (deffacts magic-interface
   (assertable
+    (name mulligan-decision)
+    (relations mulligan-decision))
+  (assertable
+    (name mulligan-cards-back-on-library)
+    (relations mulligan-cards-back-on-library))
+  (assertable
     (name play-land)
     (relations play-land))
   (assertable
@@ -22,7 +28,10 @@
     (relations pass-priority))
   
   (results 
-    (name play-land)
+    (name mulligan-decision)
+    (relations action-result))
+  (results 
+    (name mulligan-cards-back-on-library)
     (relations action-result))
   (results 
     (name cast-creature)
@@ -37,9 +46,17 @@
     (name pass-priority)
     (relations action-result))
   
+
+  (queryable
+    (name only-game-and-player-state)
+    (relations game-state player-state))
   (queryable
     (name game-state)
     (relations game-state player-state permanent card))
   (queryable
     (name winner)
-    (relations winner)))
+    (relations winner))
+  (queryable
+    (name mulligan-counter)
+    (relations mulligan-decision)))
+

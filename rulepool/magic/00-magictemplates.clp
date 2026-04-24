@@ -12,6 +12,7 @@
   (slot type)          ; land | creature | sorcery
   (slot owner)         ; p1 | p2
   (slot zone)          ; deck | hand | battlefield | graveyard
+  (slot library-position) ; position of a card in the library
   (slot mana-cost)     ; mana cost (for non-lands)
   (slot power)         ; creature power
   (slot toughness)     ; creature toughness
@@ -29,13 +30,25 @@
 
 ; Game state
 (deftemplate game-state
-  (slot phase)         ; untap | upkeep | draw | main1 | combat-declare-attackers | 
+  (slot phase)         ; start-game-players | initial-draw | start-mulligan | mulligan | mulligan-finalize | untap | upkeep | draw | main1 | combat-declare-attackers | 
                        ; combat-declare-blockers | combat-damage | main2 | end | game-over
   (slot turn-number)   ; current turn number
   (slot active-player) ; p1 | p2 - player whose turn it is
   (slot priority-player)) ; p1 | p2 - player with priority
 
 ; Actions
+
+(deftemplate mulligan-decision
+  (slot player)       ; p1 | p2
+  (slot decision)     ; yes | no
+  (slot counter)   ; number of times the player has mulliganed (starts at 0)
+  )      
+
+(deftemplate mulligan-cards-back-on-library
+  (slot player)       ; p1 | p2
+  (slot cards)        ; list of card-ids to put back on library
+  )
+
 (deftemplate play-land
   (slot player)
   (slot card-id))

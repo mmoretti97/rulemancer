@@ -1,0 +1,16 @@
+  ; Se torniamo al primo, fine mulligan
+    (if (eq ?next ?ap)
+      then
+         (modify ?gs
+            (phase main1)
+            (priority-player ?ap))
+
+         (assert
+            (action-result
+               (valid yes)
+               (reason "All players completed mulligan, going to main phase.")))
+       else
+       ; Faccio decidere il player successivo
+         (modify ?gs (priority-player ?next))
+         (assert (action-result (valid yes) (reason "Next player to decide on mulligan.")))        
+    )
