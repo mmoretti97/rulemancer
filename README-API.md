@@ -6,8 +6,6 @@ The server exposes API routes under `/api/v1`.
 
 All authenticated endpoints require:
 
-CIAO
-
 ```text
 Authorization: Bearer <jwt_token>
 ```
