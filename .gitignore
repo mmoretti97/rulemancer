@@ -34,3 +34,8 @@ server.key
 # Editor/IDE
 # .idea/
 # .vscode/
+
+### auto-generated files
+rulemancer
+
+interface/

@@ -1,0 +1,11 @@
+; 103.3 shuffle
+;(defrule shuffle
+;    ?ar <- (action-result (valid ?v) (reason ?r))
+;    ?gs <- (game-state (priority-player ?pp))
+;     =>
+;    (retract ?ar)
+;    (shuffle-library ?pp)
+;    (printout t
+;      "Shuffle library")
+;    (assert (action-result (valid yes) (reason "Library shuffled.")))
+;)
