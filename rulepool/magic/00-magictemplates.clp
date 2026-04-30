@@ -14,6 +14,7 @@
   (slot zone)          ; deck | hand | battlefield | graveyard
   (slot library-position) ; position of a card in the library
   (slot mana-cost)     ; mana cost (for non-lands)
+  (slot color)         ; color of the card 
   (slot power)         ; creature power
   (slot toughness)     ; creature toughness
   (slot damage))       ; damage on creature
@@ -40,9 +41,11 @@
 
 (deftemplate mulligan-decision
   (slot player)       ; p1 | p2
-  (slot decision)     ; yes | no
-  (slot counter)   ; number of times the player has mulliganed (starts at 0)
-  )      
+  (slot decision))     ; yes | no    
+
+(deftemplate mulligan-yes-counter
+  (slot player)       ; p1 | p2
+  (slot counter))      ; number of times the player has mulliganed (starts at 0)
 
 (deftemplate mulligan-cards-back-on-library
   (slot player)       ; p1 | p2

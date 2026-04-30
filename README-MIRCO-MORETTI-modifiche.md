@@ -1,6 +1,41 @@
 # Moretti Mirco, A.A. 2025-2026
 
-# Regole e funzioni implementate:
+# Regole, template e funzioni implementate
+
+
+# 30/04/2026
+
+- modifiche ai template
+    - **mulligan-yes-counter**: template che tiene il conto delle volte che ciascun giocatore ha detto "yes" al mulligan, in modo da sapere quante carte rimettere in fondo al mazzo
+    - **mulligan-decision**: rimosso contatore, sostituito dal template di cui sopra
+    - **cards**: aggiunto il campo "color" per il colore/mana della carta
+
+- modifiche a fatti
+    - aggiunto ad ogni carta dei mazzi rosso e verde di test il rispettivo colore di mana
+
+- nuove funzioni / modifiche
+    - **count-all-player-cards**: conta il numero totale di carte di un giocatore (tutte le zone)
+    - **shuffle-library**: corretto il comportamento della funzione, ora riassegna correttamente tutte le posizioni da 1 al numero di carte nel mazzo
+    - **normalize-library**: funzione utile per ricompattare i valori interi di "library-position" da 1 a N, siccome ogni volta che pesco estraggo la carta/le carte con il valore minore e si creano dei "buchi" tra le posizioni
+    - **put-a-card-on-bottom-deck**: funzione che inserisce una carta, in base all'id, in fondo al mazzo. Prima cerca la carta nel mazzo per quel giocatore, e se la trova, cambia la zona in "library" e le assegna "library-position" uguale al numero di carte nel mazzo + 1 (considerando che il mazzo è stato precedentemente normalizzato), poi restituisce TRUE. Se la carta non è trovata la funzione restituisce FALSE
+
+- nuovi fatti
+    - query
+        - **mulligan-yes-counter**: stampa quante carte ciascun giocatore deve ancora rimettere in fondo al mazzo
+
+- **Modifiche regole**
+    - 103.5
+        - **initial-draw**: aggiunta normalizzazione del mazzo per ogni giocatore dopo la pesca
+        - **start-mulligan**: inizializzati i fatti per la "decision" del mulligan e il contatore per ogni giocatore a 0
+        - **mulligan-yes**: aggiunta normalizzazione dopo aver ripescato le carte, aggiorno la "mulligan-decision" e il contatore di mulligan
+        - **mulligan-check-next-valid-player**: questa funzione passa la priorità nella fase di mulligan al giocatore successivo, controllando che questo non abbia già terminato il mulligan (decision=end): se trova almeno un giocatore "pending", gli passa la priorità, altrimenti tutti hann terminato la prima fase di mulligan e si passa alla fase di mulligan-finalize
+        - **skip-mulligan-finalize**: aggiunta regola che controlla se saltare la fase di "mulligan-finalize" nel caso in cui nessun giocatore avesse effettuato mulligan
+        - **put-card-on-bottom-of-deck-and-check-next-player**: funzione che viene attivata nella fase di mulligan-finalize, quando un giocatore fa l'asserzione di scegliere una carta da mettere in fondo al mazzo. Viene chiamata la funzione "put-a-card-on-bottom-deck": con esito negativo, si interrompe la funzione e si ritratta l'asserzione; con esito positivo, si aggiorna il contatore delle carte da rimettere in fondo al mazzo. Poi si controlla se tutti i giocatori hanno terminato il mulligan-finalize e in quel caso si passa alla fase di main, Altrimenti, se il giocatore attuale ha ancora carte da rimpilare la priorità resta a lui, altrimenti viene passata al primo giocatore che ha ancora carte da rimpilare.
+        - **invalid-mulligan-player-and-decision**: regola che controlla, nella fase di mulligan, quando un giocatore è sia senza priorità sia effettua una decisione non idonea (yes | no). Ritratta la decisione e interrompe l'operazione.
+        - **invalid-player-mulligan-decision**: regola che intercetta quando un giocatore effettua una decisione valida nella fase di mulligan ma non è il giocatore di priorità, ritrattando l'asserzione.
+        - **invalid-mulligan-decision**: intercetta quando il giocatore con priorità nella fase di mulligan effettua una decision non valida, ritrattando l'asserzione.
+        - **invalid-player-mulligan-card-on-bottom**: intercetta quando nella fase di mulligan-finalize, un giocatore senza priorità tenta di mettere una carta in fondo al mazzo, ritrattando l'asserzione.
+
 
 # 24/04/2026
 
@@ -23,7 +58,7 @@
     * TO-DO: il seed viene generato dal motore
 
 - caso iniziale di test
-    - nuova fase iniziale per stabilire chi inizia a giocare
+    - nuova fase iniziale per stabilire chi inizia a giocare "start-game-players"
     - nessun giocatore con priorità
 
 - nuovi fatti (02-magicmeta.clp)
@@ -40,7 +75,7 @@
     * TO-DO gestire i colori dei mana, attualmente tipo di mana non presente
 
 
-### NUOVE REGOLE 
+**Nuove regole**
 
 - **rule 103.1**
     - **rule start-game**: implementata regola per gestire le fasi iniziali di gioco:

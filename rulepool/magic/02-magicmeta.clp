@@ -58,5 +58,8 @@
     (relations winner))
   (queryable
     (name mulligan-counter)
-    (relations mulligan-decision)))
+    (relations mulligan-decision))
+  (queryable
+    (name mulligan-yes-counter)
+    (relations mulligan-yes-counter)))
 

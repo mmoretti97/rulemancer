@@ -14,3 +14,179 @@
          (modify ?gs (priority-player ?next))
          (assert (action-result (valid yes) (reason "Next player to decide on mulligan.")))        
     )
+
+    (defrule mulligan-end
+
+ ?gs <- (game-state (phase mulligan))
+ ?gc <- (game-config (num-players ?np))
+
+ ;(not (mulligan-decision (decision yes)))
+ ;(not (mulligan-decision (decision pending)))
+
+ =>
+(bind ?count 0)
+   (bind ?i 1)
+
+   (while (<= ?i ?np)
+
+      (bind ?player (sym-cat p ?i))
+
+      (if (any-factp
+            ((?md mulligan-decision))
+            (and
+               (eq ?md:player ?player)
+               (eq ?md:decision end)))
+         then
+            (bind ?count (+ ?count 1))
+      )
+
+      (bind ?i (+ ?i 1))
+   )
+
+   (if (= ?count ?np)
+      then
+         (printout t "Mulligan finished for all players." crlf)
+
+         (modify ?gs (phase mulligan-finalize))
+   )
+)
+
+
+(defrule finalize-mulligan
+
+ ?gs <- (game-state (phase mulligan-finalize))
+ ?ar <- (action-result (valid ?v) (reason ?r))
+ ?mc <- (mulligan-yes-counter (player ?pp) (counter ?c))
+ ?gc <- (game-config (num-players ?np))
+
+
+ =>
+
+ (retract ?ar)
+
+ (do-for-all-facts
+   ((?md mulligan-decision))
+   TRUE
+    (if (eq ?md:decision end)
+       then
+         ;; TO-DO il giocatore deve scegliere quale carta metter in fondo al mazzo, ora metto a caso
+   (put-n-cards-from-hand-to-library
+      ?md:player
+      ?md:counter))
+ )
+        (printout t "Mulligan finalize" crlf)
+
+ (modify ?gs (phase main1))
+ (assert (action-result (valid yes) (reason "Mulligan terminated, moving to main 1.")))        
+
+)
+
+;; Funzione per contare il numero di mulligan effettuati da un giocatore
+(deffunction count-mulligans (?player)
+   (bind ?count 0)
+   (do-for-all-facts
+      ((?md mulligan-decision))
+      (and
+            (eq ?md:player ?player)
+            (eq ?md:decision pending)
+            (eq ?md:counter 1))
+      (bind ?count (+ ?count 1))      
+   )
+   (return ?count)
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+(defrule invalid-player-mulligan-decision
+
+   ?ar <- (action-result (valid ?v) (reason ?r))
+
+   ?gs <- (game-state
+             (phase mulligan)
+             (priority-player ?pp))
+
+   ?md <- (mulligan-decision
+              (player ?req)
+              (decision ?d))
+
+   (test (neq ?req ?pp))
+   (test (neq ?d pending))
+=>
+ (retract ?ar)
+   (retract ?md)
+   (printout t
+      "Player " ?req
+      " attempted to make a mulligan decision without priority."
+      crlf)
+   (assert
+      (action-result
+         (valid no)
+         (reason "Invalid action: player has no priority during mulligan phase")))
+)
+
+(defrule invalid-mulligan-decision
+?ar <- (action-result (valid ?v) (reason ?r))
+?gs <- (game-state
+          (phase mulligan)
+          (priority-player ?pp))
+?md <- (mulligan-decision
+          (player ?req)
+          (decision ?d))
+
+(test (eq ?req ?pp))
+(test (not (or (eq ?d yes) (eq ?d no) (eq ?d pending) (eq ?d end))))
+=>
+(retract ?ar)
+(retract ?md)
+(printout t
+   "Player " ?req
+   " made an invalid mulligan decision: " ?d
+   crlf)
+(assert
+   (action-result
+      (valid no)
+      (reason "Invalid action: mulligan decision must be yes or no")))
+
+)
+
+(defrule invalid-player-mulligan-card-on-bottom
+
+   ?ar <- (action-result (valid ?v) (reason ?r))
+
+   ?gs <- (game-state
+             (phase mulligan-finalize)
+             (priority-player ?pp)
+             (active-player ?ap))
+
+   ?mcd <- (mulligan-cards-back-on-library
+              (player ?req)
+              (cards ?cards))
+
+   (test (neq ?req ?pp))
+=>
+
+   (retract ?ar)
+
+   (retract ?mcd)
+
+   (printout t
+      "Player " ?req
+      " attempted to put a card on bottom of library without priority."
+      crlf)
+
+   (assert
+      (action-result
+         (valid no)
+         (reason "Invalid action: player has no priority during mulligan-finalize")))
+)
+
