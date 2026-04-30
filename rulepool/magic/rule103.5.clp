@@ -356,6 +356,10 @@
 
 )
 
+
+;;;; Condizioni non valide
+
+
 (defrule invalid-mulligan-player-and-decision
    ?ar <- (action-result (valid ?v) (reason ?r))
 
@@ -384,6 +388,60 @@
          (reason "Invalid action: player has no priority during mulligan phase and invalid decision")))
 )
 
+
+(defrule invalid-mulligan-wrong-phase
+   ?ar <- (action-result (valid ?v) (reason ?r))
+
+   ?gs <- (game-state
+             (phase ?ph)
+             (priority-player ?pp))
+
+   ?md <- (mulligan-decision
+              (player ?req)
+              (decision ?d))
+
+   (test (not (eq ?ph mulligan)))
+   (test (or (eq ?d yes) (eq ?d no)))
+
+   =>
+   (retract ?ar)
+   (retract ?md)
+   (printout t
+      "Player " ?req
+      " attempted to make a mulligan decision outside of mulligan phase."
+      crlf)
+   (assert
+      (action-result
+         (valid no)
+         (reason "Invalid action: can only make mulligan decision during mulligan phase")))
+)
+
+(defrule invalid-mulligan-wrong-phase-and-decision
+   ?ar <- (action-result (valid ?v) (reason ?r))
+
+   ?gs <- (game-state
+             (phase ?ph)
+             (priority-player ?pp))
+
+   ?md <- (mulligan-decision
+              (player ?req)
+              (decision ?d))
+
+   (test (not (eq ?ph mulligan)))
+   (test (not (or (eq ?d yes) (eq ?d no) (eq ?d pending) (eq ?d end))))
+
+   =>
+   (retract ?ar)
+   (retract ?md)
+   (printout t
+      "Player " ?req
+      " attempted to make an invalid mulligan decision outside of mulligan phase."
+      crlf)
+   (assert
+      (action-result
+         (valid no)
+         (reason "Invalid action: can only make valid mulligan decision during mulligan phase")))
+)
 
 (defrule invalid-player-mulligan-decision
 
