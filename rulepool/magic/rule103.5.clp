@@ -60,9 +60,9 @@
  (while (<= ?i ?np)
 
    (assert
-      (mulligan-decision
+      (mulligan-state
          (player (sym-cat p ?i))
-         (decision pending)))
+         (state pending)))
    (assert 
       (mulligan-yes-counter
          (player (sym-cat p ?i))
@@ -83,6 +83,7 @@
     ?gc <- (game-config (num-players ?np))
     ?ps <- (player-state (player-id ?pp))
     ?md <- (mulligan-decision (player ?pp) (decision yes))
+    ?ms <- (mulligan-state (player ?pp) (state pending))
     ?mc <- (mulligan-yes-counter (player ?pp) (counter ?c))
      =>
 
@@ -102,9 +103,10 @@
 
         (printout t "Mulligan yes from:" ?pp crlf)
 
-    (modify ?md (decision pending))
     (modify ?mc (counter (+ ?c 1)))
+    (modify ?ms (state pending))
 
+    (retract ?md)
     ; Prossimo giocatore a decidere se mulligan
     ;; TO-DO devo controllare se tutti hanno finito di fare mulligan (ovvero tutti gli altri giocatori hanno detto no)
     ; per evitare un ciclo inutile
@@ -133,6 +135,7 @@
  ?md <- (mulligan-decision
           (player ?pp)
           (decision no))
+ ?ms <- (mulligan-state (player ?pp) (state pending))
  ?ps <- (player-state (player-id ?pp))
  ?gc <- (game-config (num-players ?np))
 
@@ -141,7 +144,8 @@
 
  (printout t "Mulligan no from:" ?pp crlf)
  (modify ?ps (has-priority no))
- (modify ?md (decision end))
+ (retract ?md)
+ (modify ?ms (state end))
  (bind ?next (next-player ?pp ?np))
  (modify ?gs (priority-player ?next))
  (do-for-all-facts
@@ -177,10 +181,7 @@
           (priority-player ?pp)
           (active-player ?ap))
 
- ?md <- (mulligan-decision
-          (player ?pp)
-          (decision end))
- 
+ ?ms <- (mulligan-state (player ?pp) (state end))
  ?ps <- (player-state (player-id ?pp))
 
  ?psa <- (player-state (player-id ?ap))
@@ -202,15 +203,15 @@
     (bind ?next (next-player ?next ?np))
 
     (if (any-factp
-          ((?m mulligan-decision))
+          ((?m mulligan-state))
           (and
              (eq ?m:player ?next)
-             (neq ?m:decision end)))
+             (neq ?m:state end)))
        then
-       (if (any-factp ((?m mulligan-decision))
+       (if (any-factp ((?m mulligan-state))
           (and
              (eq ?m:player ?next)
-             (eq ?m:decision end)))
+             (eq ?m:state end)))
        then
             (printout t "Player " ?next " has finished mulligan." crlf)
        else
@@ -243,7 +244,7 @@
 
 ;; Controllo se il giocatore con priorità ha terminato il mulligan mettendo le carte in fondo al mazzo
 ; se si passo priorità al giocatore successivo
-; TO-DO: da aggiornare quando il motore potrà gestire multislot
+; TO-DO: da aggiornare quando il motore potrà gestire multislot (opzionale, gestisce già correttamente una carta lla volta)
 (defrule put-card-on-bottom-of-deck-and-check-next-player
   ?gs <- (game-state (phase mulligan-finalize)(priority-player ?pp)(active-player ?ap))
   ?ps <- (player-state (player-id ?pp))
@@ -372,7 +373,7 @@
               (decision ?d))
 
    (test (neq ?req ?pp))
-   (test (not (or (eq ?d yes) (eq ?d no) (eq ?d pending) (eq ?d end) )))
+   (test (not (or (eq ?d yes) (eq ?d no))))
    
    =>
 
@@ -428,7 +429,7 @@
               (decision ?d))
 
    (test (not (eq ?ph mulligan)))
-   (test (not (or (eq ?d yes) (eq ?d no) (eq ?d pending) (eq ?d end))))
+   (test (not (or (eq ?d yes) (eq ?d no))))
 
    =>
    (retract ?ar)
@@ -482,7 +483,7 @@
           (decision ?d))
 
 (test (eq ?req ?pp))
-(test (not (or (eq ?d yes) (eq ?d no) (eq ?d pending) (eq ?d end))))
+(test (not (or (eq ?d yes) (eq ?d no))))
 =>
 (retract ?ar)
 (retract ?md)

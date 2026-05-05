@@ -43,6 +43,10 @@
   (slot player)       ; p1 | p2
   (slot decision))     ; yes | no    
 
+(deftemplate mulligan-state
+  (slot player)       ; p1 | p2
+  (slot state))      ; pending | end
+
 (deftemplate mulligan-yes-counter
   (slot player)       ; p1 | p2
   (slot counter))      ; number of times the player has mulliganed (starts at 0)
