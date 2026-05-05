@@ -3,6 +3,14 @@
 # Regole, template e funzioni implementate
 
 
+# 5/05/2026
+
+- modifiche ai template
+    - **mulligan-decision**: assume solo valori "yes" o "no", adesso è l'azione che compie il giocatore
+    - **mulligan-state**: nuovo template che rappresenta invece lo stato nella fase di mulligan per ogni giocatore: assume "pending" o "end" in base alla decisione del giocatore di terminare o proseguire con il mulligan
+- modifiche alle regole
+    - **103.5**: aggiornata la regola per distinguere tra lo stato del mulligan e la "decision" (asserzione) del giocatore come indicato sopra
+
 # 30/04/2026
 
 - modifiche ai template
