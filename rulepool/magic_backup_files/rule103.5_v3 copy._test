@@ -1,0 +1,80 @@
+
+(defrule initial-draw
+    (game-state
+        (phase initial-draw)
+        (starting-hand-size ?shs)
+    )
+    (player-state (player-id ?p))
+    =>
+    (bind ?hand
+        (find-all-facts ((?c card))
+            (and (eq ?c:owner ?p)
+                 (eq ?c:zone hand))
+        )
+    )
+    (if (< (length$ ?hand) ?shs)
+        then
+            (draw-card ?p)
+    )
+)
+
+(defrule initial-draw-finished
+    ?gs <- (game-state
+        (phase initial-draw)
+        (starting-hand-size ?shs)
+        (active-player ?ap)
+    )
+    (not
+        (and
+            (player-state (player-id ?p))
+            (test
+                (<
+                    (length$
+                        (find-all-facts ((?c card))
+                            (and (eq ?c:owner ?p)
+                                 (eq ?c:zone hand))
+                        )
+                    )
+                    ?shs
+                )
+            )
+        )
+    )
+    =>
+    (modify ?gs
+        (phase start-mulligan)
+        (priority-player ?ap)
+    )
+)
+
+(defrule start-mulligan-initialize-state
+   ?gs <- (game-state (phase start-mulligan)
+                      (starting-hand-size ?shs)
+                      (active-player ?ap))
+
+   =>
+
+   (do-for-all-facts ((?ps player-state))
+      TRUE
+       (bind ?found FALSE)
+
+        (do-for-all-facts ((?ms mulligan-state))
+            (eq ?ms:player (?ps:player-id))
+            (bind ?found TRUE)
+        )
+
+        (if (not ?found)
+            then
+                (assert
+                    (mulligan-state
+                        (player ?ps:player-id)
+                        (state pending)))
+                (assert
+                    (mulligan-yes-counter
+                        (player ?ps:player-id)
+                        (counter 0)))
+        )
+   )
+
+   (modify ?gs (phase mulligan) (priority-player ?ap))
+)

@@ -12,6 +12,12 @@
     (name mulligan-cards-back-on-library)
     (relations mulligan-cards-back-on-library))
   (assertable
+    (name heads-or-tails)
+    (relations heads-or-tails))
+  (assertable
+    (name starting-player-selection)
+    (relations starting-player-selection))
+  (assertable
     (name play-land)
     (relations play-land))
   (assertable
@@ -32,6 +38,12 @@
     (relations action-result))
   (results 
     (name mulligan-cards-back-on-library)
+    (relations action-result))
+  (results
+    (name heads-or-tails)
+    (relations action-result))
+  (results 
+    (name starting-player-selection)
     (relations action-result))
   (results 
     (name cast-creature)
@@ -59,7 +71,8 @@
   (queryable
     (name mulligan-state)
     (relations mulligan-state))
-  (queryable
-    (name mulligan-yes-counter)
-    (relations mulligan-yes-counter)))
+  ;(queryable
+  ;  (name mulligan-yes-counter)
+  ;  (relations mulligan-yes-counter))
+  )
 

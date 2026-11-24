@@ -57,9 +57,30 @@
       then
          (modify ?best-card
             (zone hand)
-            (library-position 0)))
+            (library-position 0))
+            (return TRUE)
+      else
+         (printout t "No card found in library for player: " ?player crlf)
+         (return FALSE)
+   )
 
    ;(assert (action-result (valid yes) (reason "Card drawn from the top of the library to hand.")))
+)
+
+(deffunction draw-cards (?player ?n)
+   (bind ?count 0)
+
+   (while (< ?count ?n)
+         (bind ?result (draw-card ?player))
+         (if (eq ?result TRUE)
+            then
+               (bind ?count (+ ?count 1))
+               (printout t "Card drawn for player: " ?player crlf)
+               
+         else
+            (return FALSE)
+         )
+   )
 )
 
 (deffunction put-all-cards-from-hand-to-library (?player)
@@ -176,6 +197,11 @@
    )
 
    (printout t "Shuffle completed for " ?player crlf)
+   (assert
+        (shuffled
+            (player-id ?player)
+        )
+   )
 )
 
 (deffunction normalize-library (?player)
@@ -230,34 +256,49 @@
    (printout t "Library normalized for " ?player crlf)
 )
 
-
+;  MODIFICATA: mette la carta in fondo al mazzo senza considerare la numerazione di library-position, ma trova la carta con posizione più alta
 (deffunction put-a-card-on-bottom-deck (?player ?card-id)
 
-   (bind ?number-library-cards (count-library ?player))
-   ;(bind ?total-cards (count-all-player-cards ?player))
-   (bind ?found FALSE)
+    (bind ?max-position 0)
+    (bind ?found FALSE)
 
-   (do-for-all-facts
-      ((?c card))
-      (and
-         (eq ?c:owner ?player)
-         (eq ?c:zone hand)
-         (eq ?c:card-id ?card-id))
+    ; Trova la posizione massima tra le carte in libreria
+    (do-for-all-facts
+        ((?c card))
+        (and
+            (eq ?c:owner ?player)
+            (eq ?c:zone library)
+        )
+        (if (> ?c:library-position ?max-position)
+            then
+                (bind ?max-position ?c:library-position)
+        )
+    )
 
-      (modify ?c
-         (library-position  (+ ?number-library-cards 1)))
-      (modify ?c
-         (zone library))  
-   (bind ?found TRUE)
- 
-   )
+    ; Cerca la carta in mano indicata e la sposta in fondo
+    (do-for-all-facts
+        ((?c card))
+        (and
+            (eq ?c:owner ?player)
+            (eq ?c:zone hand)
+            (eq ?c:card-id ?card-id)
+        )
+        (modify ?c
+            (zone library)
+            (library-position (+ ?max-position 1))
+        )
+        (bind ?found TRUE)
+    )
 
-   (if ?found then
-      (return TRUE)
-   else
-      (printout t "Card " ?card-id " not found in hand for " ?player crlf)
-      (return FALSE))
-
+    (if ?found
+        then
+            (return TRUE)
+        else
+            (printout t
+                "Card " ?card-id
+                " not found in hand for " ?player crlf)
+            (return FALSE)
+    )
 )
 
 ;; TO-DO: da rivedere, non è efficiente, ma implemetare nel motore

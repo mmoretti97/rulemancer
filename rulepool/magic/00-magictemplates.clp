@@ -4,8 +4,8 @@
   (slot max-mana)      ; maximum mana available
   (slot current-mana)  ; mana available this turn, this is simplified and doesn't track colors
   (slot lands-played)  ; number of lands played this turn (max 1)
-  (slot has-priority)) ; yes | no
-
+ ; (slot has-priority)) ; yes | no : RIMOSSO in quanto ridondante
+)
 (deftemplate card
   (slot card-id)       ; unique card identifier
   (slot name)          ; card name
@@ -40,9 +40,35 @@
 
 (deftemplate starting-draw
   (slot player-id)     ; p1 | p2
-  (slot counter)       ; number of cards still to draw (starts at starting-hand-size)
-  (slot state)         ; pending | end 
+  (slot has-drawn (default no))         ; yes | no 
   )    
+
+(deftemplate initial-shuffle
+  (slot player-id)     ; p1 | p2
+  (slot has-shuffled (default no)) ; yes | no
+)
+
+(deftemplate shuffle-request
+  (slot player-id)     ; p1 | p2
+)
+
+(deftemplate shuffled
+  (slot player-id)     ; p1 | p2
+)
+
+(deftemplate draw-request
+  (slot player)     ; p1 | p2
+)
+
+(deftemplate draw-multiple-cards-request
+  (slot player)     ; p1 | p2
+  (slot counter(default 1)) ; number of cards to draw
+)
+
+(deftemplate card-drawn
+  (slot player)     ; p1 | p2
+  (slot card-id)    ; 
+)
 
 ; Actions
 (deftemplate mulligan-decision
@@ -51,21 +77,36 @@
 
 (deftemplate mulligan-state
   (slot player)       ; p1 | p2
-  (slot state)      ; pending | end
-  (slot still-to-draw) ; n cards
-  (slot has-shuffled) ; yes | no
-  (slot has-decided) ; yes | no
-  (slot processed))      ; yes | no
+  (slot state)      ; pending | to-shuffle | to-put-back | end
+  (slot yes-counter (default 0)) ; number of times the player has done mulligan (starts at 0)
+  (slot cards-puts-back (default 0)) ; n cards
+)      
 
-(deftemplate mulligan-yes-counter
-  (slot player)       ; p1 | p2
-  (slot counter)    ; number of times the player has mulliganed (starts at 0)
-  (slot temp-counter))     ; temporary counter for drawing cards after mulligan (starts at 0)
+;(deftemplate mulligan-yes-counter
+;  (slot player)       ; p1 | p2
+;  (slot counter)    ; number of times the player has mulliganed (starts at 0)
+;)     ; temporary counter for drawing cards after mulligan (starts at 0)
 
 (deftemplate mulligan-cards-back-on-library
   (slot player)       ; p1 | p2
   (slot cards)        ; list of card-ids to put back on library
   )
+
+(deftemplate heads-or-tails
+  (slot player)       ; p1 | p2
+  (slot choice))      ; heads | tails
+
+(deftemplate heads-or-tails-result
+  (slot result))      ; heads | tails
+
+(deftemplate starting-player-chooser
+    (slot player)
+)
+
+(deftemplate starting-player-selection
+    (slot chooser)
+    (slot player)
+)
 
 (deftemplate play-land
   (slot player)

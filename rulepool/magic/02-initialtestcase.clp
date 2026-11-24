@@ -12,25 +12,43 @@
     (max-mana 0)
     (current-mana 0)
     (lands-played 0)
-    (has-priority no))
-  
+    ;(has-priority no))
+  )
+
   (player-state 
     (player-id p2)
     (life 20)
     (max-mana 0)
     (current-mana 0)
     (lands-played 0)
-    (has-priority no))
+  ;  (has-priority no))
+  )
   
   (starting-draw 
     (player-id p1)
-    (counter 0)
-    (state initialize))
+    (has-drawn no)
+  )
 
   (starting-draw 
     (player-id p2)
-    (counter 0)
-    (state initialize))
+    (has-drawn no)
+  )
+    
+  (heads-or-tails-result (result none))
+
+  (mulligan-state
+      (player p1)
+      (state pending)
+  )
+
+  (mulligan-state
+      (player p2)
+      (state pending)
+  )
+
+  (initial-shuffle (player-id p1) (has-shuffled no))
+
+  (initial-shuffle (player-id p2) (has-shuffled no))
 
   (action-result (valid none) (reason "Game started."))
   
